@@ -1,15 +1,9 @@
-// Pines de prueba en memoria (Fase 1). En la Fase 2 se reemplazan por los pines de Supabase.
+// Pines de ejemplo para las pruebas automáticas (la app usa los pines reales de Supabase).
 
-import { EDIFICIOS } from './campus.js'
-import { caja } from './geometria.js'
+import { frenteDeEdificio } from './campus.js'
 import { detectarZona } from './deteccion.js'
 
-/** Punto frente a la cara sur de un edificio (donde suele estar la entrada). */
-function frenteA(clave, dx = 0, dy = 6) {
-  const e = EDIFICIOS.find((x) => x.clave === clave)
-  const { x0, x1, y1 } = caja(e.puntos)
-  return [(x0 + x1) / 2 + dx, y1 + dy]
-}
+const frenteA = (clave, dx, dy) => frenteDeEdificio(`edificio-${clave}`, dx, dy)
 
 const horasAtras = (h) => new Date(Date.now() - h * 3600_000).toISOString()
 
