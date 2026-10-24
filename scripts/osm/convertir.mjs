@@ -283,9 +283,9 @@ for (const a of ACCESOS) {
 }
 
 // Lugares con ícono junto a la letra de su edificio
-const lugar = (tipo, nombre, clave) =>
-  salida.lugares.push({ tipo, nombre, edificio: `edificio-${clave}` })
-lugar('escolares', 'Servicios Escolares', 'A')
+const lugar = (tipo, nombre, clave, lado = 'derecha') =>
+  salida.lugares.push({ tipo, nombre, edificio: `edificio-${clave}`, lado })
+lugar('escolares', 'Servicios Escolares', 'A', 'izquierda') // a la derecha de A está D
 lugar('comida', 'Ponyplaza', 'Ponyplaza')
 lugar('biblioteca', 'Biblioteca', 'AF')
 lugar('cafeteria', 'Cafetería', 'R')

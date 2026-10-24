@@ -23,10 +23,14 @@
 .croquis[data-detalle='1'] .d2,
 .croquis[data-detalle='1'] .d3,
 .croquis[data-detalle='2'] .d3,
-.croquis:not([data-detalle='1']) .solo-d1,
-.croquis[data-detalle='1'] .etiqueta-edificio.n2,
-.croquis[data-detalle='1'] .etiqueta-edificio.n3,
-.croquis[data-detalle='2'] .etiqueta-edificio.n3 {
+.croquis:not([data-detalle='1']) .solo-d1 {
+  display: none;
+}
+
+/* Letras de edificios: data-letras (1, 2 o 3) dice qué tamaños de edificio muestran su letra */
+.croquis[data-letras='1'] .letra.n2,
+.croquis[data-letras='1'] .letra.n3,
+.croquis[data-letras='2'] .letra.n3 {
   display: none;
 }
 
@@ -104,23 +108,26 @@
 .franjas rect {
   fill: #86c562;
 }
+/* Canchas planas en tonos fríos, para no confundirse con los techos naranjas al alejar */
 .cancha-basquet {
-  fill: #d9845a;
+  fill: #7f8fd0;
 }
 .cancha-voleibol {
-  fill: #5f9fcf;
+  fill: #5bafd6;
 }
 .cancha-futbol {
   fill: #79bb55;
 }
+/* Grosor fijo en pantalla (1 px) sin importar el zoom */
 .lineas-cancha * {
   fill: none;
   stroke: #ffffff;
-  stroke-width: 0.25;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
 }
 .lineas-cancha .red {
   stroke: #2b3a4a;
-  stroke-width: 0.45;
+  stroke-width: 1.6px;
 }
 .pista {
   fill: #d0683d;
@@ -197,21 +204,37 @@
 }
 
 /* ─── Etiquetas (tamaño fijo en pantalla) ─── */
-.croquis[data-detalle='3'] .etiqueta-edificio {
-  font-size: calc(17px / var(--k));
-}
 .capa-etiquetas text {
   font-family: 'Baloo 2 Variable', system-ui, sans-serif;
   paint-order: stroke;
   stroke-linejoin: round;
 }
-.etiqueta-edificio {
-  font-size: calc(14px / var(--k));
+/* La letra va dentro de un grupo escalado a 1/--k, así que estas medidas ya son píxeles */
+.letra {
+  font-size: 14px;
+}
+.croquis[data-detalle='3'] .letra {
+  font-size: 17px;
+}
+.letra text {
   font-weight: 800;
   fill: #5a2209;
   stroke: #fff1dc;
-  stroke-width: calc(3px / var(--k));
+  stroke-width: 3px;
   text-anchor: middle;
+}
+/* Fondo de la letra: solo aparece cuando la cabeza de un pin le queda encima */
+.letra-fondo {
+  display: none;
+  fill: #fff8ec;
+  stroke: #5a2209;
+  stroke-width: 1.5px;
+}
+.letra.tapada .letra-fondo {
+  display: inline;
+}
+.letra.tapada text {
+  stroke: none;
 }
 .etiqueta-unidad {
   font-size: calc(15px / var(--k));

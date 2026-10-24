@@ -8,77 +8,18 @@
 // El nivel de detalle lo controla la clase CSS del contenedor (data-detalle = 1, 2 o 3):
 // los elementos con clase d2 o d3 solo aparecen al acercar (ver croquis.css).
 
-import campus from './campus-osm.json'
 import {
-  aPuntosSvg,
-  aRuta,
-  area,
-  caja,
-  muros,
-  puntoEtiqueta,
-  rectanguloOrientado,
-} from './geometria.js'
+  CALLES_CON_NOMBRE,
+  EDIFICIOS,
+  ESTACIONAMIENTOS_ROTULADOS,
+  LIMITES,
+  NOMBRES_UNIDADES,
+  VOLUMENES,
+  campus,
+} from './campus.js'
+import { aPuntosSvg, aRuta, muros, puntoEtiqueta, rectanguloOrientado } from './geometria.js'
 
-const LIMITES = campus.limites
 const VIEWBOX = `${LIMITES.x} ${LIMITES.y} ${LIMITES.ancho} ${LIMITES.alto}`
-
-// ─── Cálculos que no cambian: se hacen una sola vez al cargar el módulo ───
-
-/** Altura (en metros) con la que se dibuja cada edificio. Un poco exagerada para que se lea. */
-const altoDe = (niveles) => 2.5 + 2.5 * niveles
-
-// Edificios ordenados de norte a sur: los del sur se dibujan después y tapan a los de atrás
-const EDIFICIOS = campus.edificios
-  .map((e) => {
-    const alto = altoDe(e.niveles)
-    const r = rectanguloOrientado(e.puntos)
-    const [x, y] = puntoEtiqueta(e.puntos)
-    // Tamaño corto del edificio: decide desde qué nivel de zoom aparece su letra
-    const corto = Math.min(r.largo, r.ancho)
-    const nivel = corto >= 13 ? 1 : corto >= 7 ? 2 : 3
-    return { ...e, alto, etiqueta: [x, y - alto], nivel, sur: caja(e.puntos).y1 }
-  })
-  .sort((a, b) => a.sur - b.sur)
-
-// Un estacionamiento puede venir en varios polígonos (el 2): se rotula solo el más grande
-const ESTACIONAMIENTOS_ROTULADOS = Object.values(
-  campus.estacionamientos.reduce((porId, e) => {
-    if (!porId[e.id] || area(e.puntos) > area(porId[e.id].puntos)) porId[e.id] = e
-    return porId
-  }, {}),
-)
-
-// Todo lo que se dibuja con volumen, de norte a sur. Las construcciones sin letra (por ejemplo AI)
-// se dibujan igual que un edificio, pero no llevan etiqueta ni cuentan como zona.
-const VOLUMENES = [
-  ...EDIFICIOS,
-  ...campus.construcciones.map((c) => ({ ...c, alto: altoDe(c.niveles), sur: caja(c.puntos).y1 })),
-].sort((a, b) => a.sur - b.sur)
-
-const largoDe = (puntos) =>
-  puntos.reduce(
-    (s, p, i) => (i ? s + Math.hypot(p[0] - puntos[i - 1][0], p[1] - puntos[i - 1][1]) : 0),
-    0,
-  )
-
-// El nombre de cada calle va sobre su tramo más largo, escrito de izquierda a derecha
-const CALLES_CON_NOMBRE = Object.values(
-  campus.calles.reduce((porNombre, c) => {
-    const largo = largoDe(c.puntos)
-    if (!porNombre[c.nombre] || largo > porNombre[c.nombre].largo) {
-      const puntos = c.puntos[0][0] > c.puntos.at(-1)[0] ? [...c.puntos].reverse() : c.puntos
-      porNombre[c.nombre] = { nombre: c.nombre, puntos, largo }
-    }
-    return porNombre
-  }, {}),
-)
-
-// Nombres de las unidades: posición elegida a mano (en metros) en un espacio libre
-const NOMBRES_UNIDADES = [
-  { texto: 'Unidad Metal Mecánica', x: -138, y: -305 },
-  { texto: 'Unidad Central', x: 125, y: -262 },
-  { texto: 'Unidad Posgrado', x: 200, y: 250 },
-]
 
 // ─── Piezas de dibujo ───
 
@@ -89,34 +30,37 @@ function LineasCancha({ puntos, deporte }) {
   const l = L / 2 - m
   const a = A / 2 - m
   return (
-    <g className="lineas-cancha d2" transform={`translate(${cx} ${cy}) rotate(${angulo})`}>
+    <g className="lineas-cancha" transform={`translate(${cx} ${cy}) rotate(${angulo})`}>
+      {/* El borde se ve siempre (así se lee como cancha al alejar); lo demás, al acercar */}
       <rect x={-l} y={-a} width={l * 2} height={a * 2} />
-      <line x1={0} y1={-a} x2={0} y2={a} />
-      {deporte === 'futbol' && (
-        <>
-          <circle r={A * 0.13} />
-          <rect x={-l} y={-A * 0.3} width={L * 0.16} height={A * 0.6} />
-          <rect x={l - L * 0.16} y={-A * 0.3} width={L * 0.16} height={A * 0.6} />
-          <rect x={-l} y={-A * 0.14} width={L * 0.055} height={A * 0.28} />
-          <rect x={l - L * 0.055} y={-A * 0.14} width={L * 0.055} height={A * 0.28} />
-        </>
-      )}
-      {deporte === 'basquet' && (
-        <>
-          <circle r={A * 0.12} />
-          <rect x={-l} y={-A * 0.16} width={L * 0.2} height={A * 0.32} />
-          <rect x={l - L * 0.2} y={-A * 0.16} width={L * 0.2} height={A * 0.32} />
-          <path d={`M${-l} ${-a * 0.85} A${a * 0.85} ${a * 0.85} 0 0 1 ${-l} ${a * 0.85}`} />
-          <path d={`M${l} ${-a * 0.85} A${a * 0.85} ${a * 0.85} 0 0 0 ${l} ${a * 0.85}`} />
-        </>
-      )}
-      {deporte === 'voleibol' && (
-        <>
-          <line x1={-L / 6} y1={-a} x2={-L / 6} y2={a} />
-          <line x1={L / 6} y1={-a} x2={L / 6} y2={a} />
-          <line className="red" x1={0} y1={-a - m * 0.6} x2={0} y2={a + m * 0.6} />
-        </>
-      )}
+      <g className="d2">
+        <line x1={0} y1={-a} x2={0} y2={a} />
+        {deporte === 'futbol' && (
+          <>
+            <circle r={A * 0.13} />
+            <rect x={-l} y={-A * 0.3} width={L * 0.16} height={A * 0.6} />
+            <rect x={l - L * 0.16} y={-A * 0.3} width={L * 0.16} height={A * 0.6} />
+            <rect x={-l} y={-A * 0.14} width={L * 0.055} height={A * 0.28} />
+            <rect x={l - L * 0.055} y={-A * 0.14} width={L * 0.055} height={A * 0.28} />
+          </>
+        )}
+        {deporte === 'basquet' && (
+          <>
+            <circle r={A * 0.12} />
+            <rect x={-l} y={-A * 0.16} width={L * 0.2} height={A * 0.32} />
+            <rect x={l - L * 0.2} y={-A * 0.16} width={L * 0.2} height={A * 0.32} />
+            <path d={`M${-l} ${-a * 0.85} A${a * 0.85} ${a * 0.85} 0 0 1 ${-l} ${a * 0.85}`} />
+            <path d={`M${l} ${-a * 0.85} A${a * 0.85} ${a * 0.85} 0 0 0 ${l} ${a * 0.85}`} />
+          </>
+        )}
+        {deporte === 'voleibol' && (
+          <>
+            <line x1={-L / 6} y1={-a} x2={-L / 6} y2={a} />
+            <line x1={L / 6} y1={-a} x2={L / 6} y2={a} />
+            <line className="red" x1={0} y1={-a - m * 0.6} x2={0} y2={a + m * 0.6} />
+          </>
+        )}
+      </g>
     </g>
   )
 }
@@ -387,10 +331,13 @@ const ICONOS = {
 }
 
 /** Ícono de un lugar (comida, biblioteca…) junto a la letra de su edificio. Tamaño fijo en pantalla. */
-function Lugar({ tipo, nombre, edificio }) {
+function Lugar({ tipo, nombre, edificio, lado = 'derecha' }) {
   const e = EDIFICIOS.find((x) => x.id === edificio)
-  // Ponyplaza no lleva letra, así que el ícono va justo en el centro del techo
-  const desplazamiento = e.clave === 'Ponyplaza' ? '0 0' : '18 -10'
+  // Ponyplaza no lleva letra, así que el ícono va justo en el centro del techo.
+  // En los demás va a un lado de la letra (a la izquierda cuando a la derecha hay otro edificio).
+  const desplazamiento =
+    e.clave === 'Ponyplaza' ? '0 0' : lado === 'izquierda' ? '-18 -10' : '18 -10'
+  const izquierda = lado === 'izquierda'
   return (
     <g
       className={`lugar lugar-${tipo}`}
@@ -401,7 +348,12 @@ function Lugar({ tipo, nombre, edificio }) {
       <g transform={`translate(${desplazamiento})`}>
         <circle r="11.5" className="lugar-fondo" />
         <path d={ICONOS[tipo]} transform="translate(-7.2 -7.2) scale(.6)" className="lugar-icono" />
-        <text className="lugar-nombre d3" x="15" y="4">
+        <text
+          className="lugar-nombre d3"
+          x={izquierda ? -15 : 15}
+          y="4"
+          textAnchor={izquierda ? 'end' : 'start'}
+        >
           {nombre}
         </text>
       </g>
@@ -409,7 +361,10 @@ function Lugar({ tipo, nombre, edificio }) {
   )
 }
 
-export function CapaEtiquetas() {
+/**
+ * @param {{tapadas?: Set<string>}} props ids de edificios cuya letra queda bajo un pin
+ */
+export function CapaEtiquetas({ tapadas = new Set() }) {
   return (
     <svg className="capa-croquis capa-etiquetas" viewBox={VIEWBOX} aria-hidden="true">
       <defs>
@@ -475,18 +430,29 @@ export function CapaEtiquetas() {
         </g>
       ))}
 
-      {/* Letras de los edificios */}
-      {EDIFICIOS.filter((e) => e.clave !== 'Ponyplaza').map((e) => (
-        <text
-          key={e.id}
-          className={`etiqueta-edificio n${e.nivel}`}
-          x={e.etiqueta[0]}
-          y={e.etiqueta[1]}
-          dy="0.36em"
-        >
-          {e.clave}
-        </text>
-      ))}
+      {/* Letras de los edificios. Si un pin queda encima, la letra lleva un fondo para leerse */}
+      {EDIFICIOS.filter((e) => e.clave !== 'Ponyplaza').map((e) => {
+        const ancho = 0.62 * e.clave.length + 0.7 // en em, para que crezca con la letra
+        return (
+          <g
+            key={e.id}
+            className={`letra n${e.nivel} ${tapadas.has(e.id) ? 'tapada' : ''}`}
+            style={{
+              transform: `translate(${e.etiqueta[0]}px, ${e.etiqueta[1]}px) scale(calc(1 / var(--k)))`,
+            }}
+          >
+            <rect
+              className="letra-fondo"
+              x={`${-ancho / 2}em`}
+              y="-0.62em"
+              width={`${ancho}em`}
+              height="1.24em"
+              rx="0.4em"
+            />
+            <text dy="0.36em">{e.clave}</text>
+          </g>
+        )
+      })}
 
       {campus.lugares.map((l) => (
         <Lugar key={l.nombre} {...l} />

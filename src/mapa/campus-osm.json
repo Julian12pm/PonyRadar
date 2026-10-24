@@ -3947,12 +3947,32 @@
     { "id": "acceso-posgrado", "nombre": "Accesos Posgrado", "punto": [242, 223] }
   ],
   "lugares": [
-    { "tipo": "escolares", "nombre": "Servicios Escolares", "edificio": "edificio-A" },
-    { "tipo": "comida", "nombre": "Ponyplaza", "edificio": "edificio-Ponyplaza" },
-    { "tipo": "biblioteca", "nombre": "Biblioteca", "edificio": "edificio-AF" },
-    { "tipo": "cafeteria", "nombre": "Cafetería", "edificio": "edificio-R" },
-    { "tipo": "comedor", "nombre": "Comedor estudiantil", "edificio": "edificio-X" },
-    { "tipo": "comedor", "nombre": "Comedor para trabajadores", "edificio": "edificio-S2" }
+    {
+      "tipo": "escolares",
+      "nombre": "Servicios Escolares",
+      "edificio": "edificio-A",
+      "lado": "izquierda"
+    },
+    {
+      "tipo": "comida",
+      "nombre": "Ponyplaza",
+      "edificio": "edificio-Ponyplaza",
+      "lado": "derecha"
+    },
+    { "tipo": "biblioteca", "nombre": "Biblioteca", "edificio": "edificio-AF", "lado": "derecha" },
+    { "tipo": "cafeteria", "nombre": "Cafetería", "edificio": "edificio-R", "lado": "derecha" },
+    {
+      "tipo": "comedor",
+      "nombre": "Comedor estudiantil",
+      "edificio": "edificio-X",
+      "lado": "derecha"
+    },
+    {
+      "tipo": "comedor",
+      "nombre": "Comedor para trabajadores",
+      "edificio": "edificio-S2",
+      "lado": "derecha"
+    }
   ],
   "arboles": [
     [-3.9, 41.6, 3.4],
