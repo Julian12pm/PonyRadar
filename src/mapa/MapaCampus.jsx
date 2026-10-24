@@ -14,11 +14,15 @@ const LIMITES = campus.limites
 // Convierte metros a píxeles del contenido (el contenido mide 1 px por metro a escala 1)
 const aContenido = ([x, y]) => [x - LIMITES.x, y - LIMITES.y]
 
-// Caja que contiene las 3 unidades del campus, en píxeles del contenido
+// Margen (en px) entre el campus y la orilla del mapa en la vista inicial
+const MARGENES = { arriba: 6, abajo: 6, lados: 6 }
+
+// Caja que se encuadra al inicio: las 3 unidades más el espacio de sus nombres
+// (arriba de Metal Mecánica y abajo de Posgrado), en píxeles del contenido
 const CAJA_CAMPUS = (() => {
   const { x0, y0, x1, y1 } = caja(campus.unidades.flatMap((u) => u.puntos))
-  const [ax, ay] = aContenido([x0, y0])
-  const [bx, by] = aContenido([x1, y1])
+  const [ax, ay] = aContenido([x0, y0 - 28])
+  const [bx, by] = aContenido([x1, y1 + 22])
   return { x0: ax, y0: ay, x1: bx, y1: by }
 })()
 
@@ -50,11 +54,36 @@ function Marcador({ punto, ancla = 'abajo', children, etiqueta }) {
   )
 }
 
-export default function MapaCampus({ pines = [], grupos = [], seguros = [], margenes }) {
-  const contenido = useRef(null)
-  const [inicial] = useState(() =>
-    encuadrar(CAJA_CAMPUS, { ancho: window.innerWidth, alto: window.innerHeight }, margenes),
+/**
+ * Ocupa todo su contenedor. Primero mide el espacio disponible y luego monta el mapa;
+ * si cambia el tamaño (por ejemplo, al girar el celular) se vuelve a encuadrar.
+ */
+export default function MapaCampus(props) {
+  const marco = useRef(null)
+  const [tamano, setTamano] = useState(null)
+
+  useLayoutEffect(() => {
+    const el = marco.current
+    const medir = () => setTamano({ ancho: el.clientWidth, alto: el.clientHeight })
+    medir()
+    if (typeof ResizeObserver === 'undefined') return // en las pruebas (jsdom) no existe
+    const observador = new ResizeObserver(medir)
+    observador.observe(el)
+    return () => observador.disconnect()
+  }, [])
+
+  const listo = tamano && tamano.ancho > 0 && tamano.alto > 0
+  return (
+    <div ref={marco} className="absolute inset-0">
+      {listo && <Lienzo key={`${tamano.ancho}x${tamano.alto}`} tamano={tamano} {...props} />}
+    </div>
   )
+}
+
+function Lienzo({ tamano, pines = [], grupos = [], seguros = [] }) {
+  const contenido = useRef(null)
+  // Encuadre inicial: las 3 unidades ocupan todo el espacio disponible, con un margen mínimo
+  const [inicial] = useState(() => encuadrar(CAJA_CAMPUS, tamano, MARGENES))
 
   // Pasa la escala actual al CSS: tamaño fijo de etiquetas y nivel de detalle
   const aplicarEscala = (escala) => {
@@ -70,9 +99,11 @@ export default function MapaCampus({ pines = [], grupos = [], seguros = [], marg
       initialScale={inicial.escala}
       initialPositionX={inicial.x}
       initialPositionY={inicial.y}
-      minScale={inicial.escala * 0.8}
+      // No se puede alejar más que el encuadre inicial ni arrastrar el campus fuera de la vista
+      minScale={inicial.escala}
       maxScale={5}
-      limitToBounds={false}
+      limitToBounds
+      centerZoomedOut
       doubleClick={{ disabled: true }}
       onTransform={(_, estado) => aplicarEscala(estado.scale)}
     >

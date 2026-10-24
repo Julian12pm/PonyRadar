@@ -5,6 +5,7 @@
 @theme {
   --font-sans: 'Baloo 2 Variable', system-ui, sans-serif;
   --color-tinta: #2b3a4a;
+  --color-fondo: #e9ebe1;
   --color-pin-rojo: #f2545b;
   --color-pin-verde: #2fb36f;
   --color-techo: #f6a650;
