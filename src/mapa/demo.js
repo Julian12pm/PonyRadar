@@ -1,25 +1,111 @@
-// Pines de prueba en memoria (Fase 1). En la Fase 2 se reemplazan por los pines de Supabase.
+// Pines de ejemplo para las pruebas automáticas (la app usa los pines reales de Supabase).
 
-import campus from './campus-osm.json'
-import { caja } from './geometria.js'
+import { frenteDeEdificio } from './campus.js'
+import { detectarZona } from './deteccion.js'
 
-/** Punto frente a la cara sur de un edificio (donde suele estar la entrada). */
-function frenteA(clave, dx = 0, dy = 6) {
-  const e = campus.edificios.find((x) => x.clave === clave)
-  const { x0, x1, y1 } = caja(e.puntos)
-  return [(x0 + x1) / 2 + dx, y1 + dy]
-}
+const frenteA = (clave, dx, dy) => frenteDeEdificio(`edificio-${clave}`, dx, dy)
 
-export const PINES_DEMO = [
-  { id: 'p1', tipo: 'rojo', punto: frenteA('CH') },
-  { id: 'p2', tipo: 'rojo', punto: frenteA('E', -6) },
-  { id: 'p3', tipo: 'verde', punto: frenteA('R', 4) },
-  { id: 'p4', tipo: 'verde', punto: frenteA('Q', 8, 10) },
-  { id: 'p5', tipo: 'rojo', punto: frenteA('J') },
-  { id: 'p6', tipo: 'verde', punto: frenteA('AH', 30, 14) },
-  { id: 'p7', tipo: 'rojo', punto: frenteA('2D') },
+const horasAtras = (h) => new Date(Date.now() - h * 3600_000).toISOString()
+
+const BASE = [
+  {
+    id: 'demo-01',
+    tipo: 'rojo',
+    categoria: 'electronicos',
+    titulo: 'Calculadora Casio gris',
+    punto: frenteA('CH'),
+    horas: 3,
+  },
+  {
+    id: 'demo-02',
+    tipo: 'rojo',
+    categoria: 'credenciales',
+    titulo: 'Credencial del Tec',
+    punto: frenteA('E', -6),
+    horas: 20,
+  },
+  {
+    id: 'demo-03',
+    tipo: 'verde',
+    categoria: 'termos',
+    titulo: 'Termo azul',
+    punto: frenteA('R', 4),
+    horas: 1,
+  },
+  {
+    id: 'demo-04',
+    tipo: 'verde',
+    categoria: 'llaves',
+    titulo: 'Llavero con 3 llaves',
+    punto: frenteA('Q', 8, 10),
+    horas: 30,
+  },
+  {
+    id: 'demo-05',
+    tipo: 'rojo',
+    categoria: 'mochilas',
+    titulo: 'Mochila negra',
+    punto: frenteA('J'),
+    horas: 8,
+  },
+  {
+    id: 'demo-06',
+    tipo: 'verde',
+    categoria: 'ropa',
+    titulo: 'Sudadera gris',
+    punto: frenteA('AH', 30, 14),
+    horas: 50,
+  },
+  {
+    id: 'demo-07',
+    tipo: 'rojo',
+    categoria: 'utiles',
+    titulo: 'Cuaderno de cálculo',
+    punto: frenteA('2D'),
+    horas: 5,
+  },
+  // Tres pines muy juntos frente al gimnasio: al alejar se agrupan
+  {
+    id: 'demo-08',
+    tipo: 'rojo',
+    categoria: 'electronicos',
+    titulo: 'Audífonos blancos',
+    punto: frenteA('U', -6, 8),
+    horas: 2,
+  },
+  {
+    id: 'demo-09',
+    tipo: 'verde',
+    categoria: 'otros',
+    titulo: 'Paraguas',
+    punto: frenteA('U', 2, 10),
+    horas: 4,
+  },
+  {
+    id: 'demo-10',
+    tipo: 'verde',
+    categoria: 'credenciales',
+    titulo: 'INE',
+    punto: frenteA('U', 8, 7),
+    horas: 12,
+  },
+  {
+    id: 'demo-11',
+    tipo: 'rojo',
+    categoria: 'llaves',
+    titulo: 'Llave de casillero',
+    punto: frenteA('3A', 0, 8),
+    horas: 26,
+  },
 ]
 
-export const GRUPOS_DEMO = [{ id: 'g1', cantidad: 4, punto: frenteA('U', 0, 10) }]
+/** Pines de prueba con su zona ya detectada. */
+export const PINES_DEMO = BASE.map(({ horas, ...p }) => {
+  const zona = detectarZona(p.punto)
+  return { ...p, zonaId: zona?.id ?? null, creado: horasAtras(horas) }
+})
 
-export const SEGUROS_DEMO = [{ id: 's1', cantidad: 3, punto: frenteA('AF', 0, 7) }]
+// Punto seguro principal: el Centro de Información (AF), con su contador de objetos en resguardo
+export const SEGUROS_DEMO = [
+  { id: 's1', nombre: 'Biblioteca (AF)', cantidad: 3, punto: frenteA('AF', 0, 7) },
+]

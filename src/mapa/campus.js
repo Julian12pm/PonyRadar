@@ -2,7 +2,7 @@
 // Lee src/mapa/campus-osm.json (generado desde OpenStreetMap) y calcula, una sola vez,
 // lo que no cambia: altura y punto de la etiqueta de cada edificio, calles con nombre, etc.
 
-import campus from './campus-osm.json'
+import campus from './campus-osm.json' with { type: 'json' }
 import { area, caja, puntoEtiqueta, rectanguloOrientado } from './geometria.js'
 
 export { campus }
@@ -69,3 +69,14 @@ export const NOMBRES_UNIDADES = [
 
 /** Caja (en metros) de cada unidad, para los botones de salto rápido. */
 export const CAJAS_UNIDADES = Object.fromEntries(campus.unidades.map((u) => [u.id, caja(u.puntos)]))
+
+/**
+ * Punto (metros) frente a la cara sur de un edificio, donde suele estar su entrada.
+ * Se usa para colocar el ícono de un punto seguro a partir de su zona (por ejemplo "edificio-AF").
+ */
+export function frenteDeEdificio(zonaId, dx = 0, dy = 6) {
+  const e = EDIFICIOS.find((x) => x.id === zonaId)
+  if (!e) return null
+  const { x0, x1, y1 } = caja(e.puntos)
+  return [(x0 + x1) / 2 + dx, y1 + dy]
+}

@@ -1,58 +1,34 @@
-// Pantalla principal: barra superior, mapa del campus en medio y botones abajo.
-// El mapa queda entre las dos barras para que nada lo tape ni corte edificios en la orilla.
-import { useRef, useState } from 'react'
-import Saltos from './componentes/Saltos.jsx'
-import MapaCampus from './mapa/MapaCampus.jsx'
-import { GRUPOS_DEMO, PINES_DEMO, SEGUROS_DEMO } from './mapa/demo.js'
+// Punto de entrada de las pantallas: sin sesión muestra el inicio de sesión; con sesión, el mapa.
+import { configurado } from './lib/supabase.js'
+import { useSesion } from './lib/sesion.js'
+import Login from './paginas/Login.jsx'
+import Mapa from './paginas/Mapa.jsx'
 
-const FILTROS = ['Todo', 'Perdidos', 'Encontrados', 'Categoría']
+function Sesion() {
+  const { cargando, sesion, perfil } = useSesion()
+  if (cargando) {
+    return (
+      <main className="grid h-full place-items-center bg-fondo">
+        <p className="text-2xl font-extrabold">PonyRadar</p>
+      </main>
+    )
+  }
+  return sesion ? <Mapa perfil={perfil} /> : <Login />
+}
 
 export default function App() {
-  const mapa = useRef(null)
-  const [fueraDeVista, setFueraDeVista] = useState({})
-
-  return (
-    <main className="flex h-full flex-col bg-fondo">
-      <header className="shrink-0 px-3 pt-3 pb-1">
-        <div className="tarjeta mx-auto max-w-xl px-4 pt-2.5 pb-3">
-          <h1 className="text-2xl leading-tight font-extrabold">PonyRadar</h1>
-          <div className="chips mt-1.5 flex gap-1.5 overflow-x-auto">
-            {FILTROS.map((f, i) => (
-              <button key={f} className={`chip ${i === 0 ? 'chip-activo' : ''}`}>
-                {f}
-              </button>
-            ))}
-          </div>
+  if (!configurado) {
+    return (
+      <main className="grid h-full place-items-center bg-fondo p-6 text-center">
+        <div className="tarjeta max-w-sm p-5">
+          <h1 className="text-2xl font-extrabold">PonyRadar</h1>
+          <p className="mt-2">
+            Falta configurar Supabase: copia <code>.env.example</code> como <code>.env.local</code>{' '}
+            y llena sus valores.
+          </p>
         </div>
-      </header>
-
-      <section className="relative min-h-0 flex-1" aria-label="Mapa del campus">
-        <MapaCampus
-          ref={mapa}
-          pines={PINES_DEMO}
-          grupos={GRUPOS_DEMO}
-          seguros={SEGUROS_DEMO}
-          onFueraDeVista={setFueraDeVista}
-        />
-      </section>
-
-      <footer className="shrink-0 px-3 pt-2 pb-3">
-        <div className="mx-auto max-w-md text-center">
-          <Saltos contadores={fueraDeVista} onSaltar={(id) => mapa.current?.saltar(id)} />
-          <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-            <button className="boton boton-rojo">Perdí algo</button>
-            <button className="boton boton-verde">Encontré algo</button>
-          </div>
-          <a
-            className="atribucion"
-            href="https://www.openstreetmap.org/copyright"
-            target="_blank"
-            rel="noreferrer"
-          >
-            © OpenStreetMap contributors
-          </a>
-        </div>
-      </footer>
-    </main>
-  )
+      </main>
+    )
+  }
+  return <Sesion />
 }
