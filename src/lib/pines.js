@@ -10,7 +10,7 @@ export function errorDe(error) {
 export const ESTADOS_EN_MAPA = ['activo', 'con_solicitud', 'aceptado']
 
 export const COLUMNAS =
-  'id, autor_id, tipo, categoria, titulo, descripcion, zona_id, piso, x, y, estado, creado_en, expira_en, foto_publica, tiene_foto_nitida'
+  'id, autor_id, tipo, categoria, titulo, descripcion, zona_id, piso, x, y, estado, creado_en, expira_en, renovado, foto_publica, tiene_foto_nitida, punto_seguro_id'
 
 /** Convierte una fila de la tabla "pines" al formato que usa la app. */
 export function filaAPin(fila) {
@@ -29,6 +29,8 @@ export function filaAPin(fila) {
     expira: fila.expira_en,
     fotoPublica: fila.foto_publica ?? null,
     tieneFotoNitida: Boolean(fila.tiene_foto_nitida),
+    renovado: Boolean(fila.renovado),
+    puntoSeguroId: fila.punto_seguro_id ?? null,
   }
 }
 
