@@ -25,17 +25,25 @@ npm run dev                  # abre http://localhost:5173
 
 ## Comandos
 
-| Comando                | Qué hace                                         |
-| ---------------------- | ------------------------------------------------ |
-| `npm run dev`          | Servidor de desarrollo con recarga automática    |
-| `npm run build`        | Genera la versión de producción en `dist/`       |
-| `npm run preview`      | Sirve `dist/` para probar el build               |
-| `npm run lint`         | Revisa el código con ESLint                      |
-| `npm run format`       | Da formato a todo con Prettier                   |
-| `npm run format:check` | Verifica el formato sin cambiar nada (lo usa CI) |
-| `npm test`             | Corre las pruebas una vez                        |
-| `npm run test:watch`   | Corre las pruebas cada vez que guardas           |
-| `npm run coverage`     | Pruebas + reporte de cobertura en `coverage/`    |
+| Comando                 | Qué hace                                          |
+| ----------------------- | ------------------------------------------------- |
+| `npm run dev`           | Servidor de desarrollo con recarga automática     |
+| `npm run build`         | Genera la versión de producción en `dist/`        |
+| `npm run preview`       | Sirve `dist/` para probar el build                |
+| `npm run lint`          | Revisa el código con ESLint                       |
+| `npm run format`        | Da formato a todo con Prettier                    |
+| `npm run format:check`  | Verifica el formato sin cambiar nada (lo usa CI)  |
+| `npm test`              | Corre las pruebas una vez                         |
+| `npm run test:watch`    | Corre las pruebas cada vez que guardas            |
+| `npm run coverage`      | Pruebas + reporte de cobertura en `coverage/`     |
+| `npm run osm:descargar` | Baja de OpenStreetMap los datos crudos del campus |
+| `npm run osm:convertir` | Genera `src/mapa/campus-osm.json` para el croquis |
+
+## Datos del mapa
+
+El croquis se dibuja con la geometría real de **OpenStreetMap** (© OpenStreetMap contributors, licencia [ODbL](https://www.openstreetmap.org/copyright); el crédito aparece en la app). El plano oficial (`referencia/ITM_Plano_General.pdf`, página 1) solo se usa para nombres de edificios, estacionamientos y accesos.
+
+Para actualizarlo: `npm run osm:descargar` y luego `npm run osm:convertir`. Los nombres que OSM no trae (leyenda del plano, números de estacionamiento, accesos) están en `src/mapa/leyenda.js` y al inicio de `scripts/osm/convertir.mjs`.
 
 ## Pruebas
 
@@ -50,12 +58,13 @@ Después de `npm run coverage`, abre `coverage/index.html` para ver el reporte d
 ├── .github/workflows/ci.yml   # CI: lint, formato, pruebas y build
 ├── docs/IDEA.md               # Especificación de la beta
 ├── public/                    # Archivos estáticos (íconos)
-├── referencia/prototipo/      # Prototipo viejo, solo inspiración (no se compila)
+├── referencia/                # Plano oficial (PDF) y prototipo viejo (no se compilan)
+├── scripts/osm/               # Descarga y conversión de los datos de OpenStreetMap
 ├── src/
-│   ├── componentes/           # Piezas de interfaz reutilizables
+│   ├── componentes/           # Piezas de interfaz (filtros, hojas, botones de salto…)
 │   ├── paginas/               # Pantallas completas (una por ruta)
-│   ├── mapa/                  # Croquis SVG, zonas (zonas.js) y lógica del mapa
-│   ├── lib/                   # Funciones puras y cliente de Supabase
+│   ├── mapa/                  # Croquis SVG, zonas.js, detección de zona, agrupación de pines
+│   ├── lib/                   # Funciones puras (categorías, filtros, tiempo…) y cliente de Supabase
 │   ├── test/setup.js          # Configuración común de las pruebas
 │   ├── App.jsx
 │   ├── main.jsx
