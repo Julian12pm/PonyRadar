@@ -1,18 +1,58 @@
-// Pantalla provisional de la Fase 0. En la Fase 1 se reemplaza por el mapa del campus.
+// Pantalla principal: barra superior, mapa del campus en medio y botones abajo.
+// El mapa queda entre las dos barras para que nada lo tape ni corte edificios en la orilla.
+import { useRef, useState } from 'react'
+import Saltos from './componentes/Saltos.jsx'
+import MapaCampus from './mapa/MapaCampus.jsx'
+import { GRUPOS_DEMO, PINES_DEMO, SEGUROS_DEMO } from './mapa/demo.js'
+
+const FILTROS = ['Todo', 'Perdidos', 'Encontrados', 'Categoría']
+
 export default function App() {
+  const mapa = useRef(null)
+  const [fueraDeVista, setFueraDeVista] = useState({})
+
   return (
-    <main className="flex min-h-full flex-col items-center justify-center gap-4 px-6 text-center">
-      <img src="/favicon.svg" alt="" className="size-16" />
-      <h1 className="text-3xl font-extrabold tracking-tight">
-        Pony<span className="text-acento">Radar</span>
-      </h1>
-      <p className="max-w-xs text-neutral-400">
-        Objetos perdidos y encontrados del Tec de Morelia. Muy pronto, sobre el mapa del campus.
-      </p>
-      <div className="flex gap-3 text-sm">
-        <span className="rounded-full bg-pin-rojo/15 px-3 py-1 text-pin-rojo">Perdí algo</span>
-        <span className="rounded-full bg-pin-verde/15 px-3 py-1 text-pin-verde">Encontré algo</span>
-      </div>
+    <main className="flex h-full flex-col bg-fondo">
+      <header className="shrink-0 px-3 pt-3 pb-1">
+        <div className="tarjeta mx-auto max-w-xl px-4 pt-2.5 pb-3">
+          <h1 className="text-2xl leading-tight font-extrabold">PonyRadar</h1>
+          <div className="chips mt-1.5 flex gap-1.5 overflow-x-auto">
+            {FILTROS.map((f, i) => (
+              <button key={f} className={`chip ${i === 0 ? 'chip-activo' : ''}`}>
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      <section className="relative min-h-0 flex-1" aria-label="Mapa del campus">
+        <MapaCampus
+          ref={mapa}
+          pines={PINES_DEMO}
+          grupos={GRUPOS_DEMO}
+          seguros={SEGUROS_DEMO}
+          onFueraDeVista={setFueraDeVista}
+        />
+      </section>
+
+      <footer className="shrink-0 px-3 pt-2 pb-3">
+        <div className="mx-auto max-w-md text-center">
+          <Saltos contadores={fueraDeVista} onSaltar={(id) => mapa.current?.saltar(id)} />
+          <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+            <button className="boton boton-rojo">Perdí algo</button>
+            <button className="boton boton-verde">Encontré algo</button>
+          </div>
+          <a
+            className="atribucion"
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noreferrer"
+          >
+            © OpenStreetMap contributors
+          </a>
+        </div>
+      </footer>
     </main>
   )
 }

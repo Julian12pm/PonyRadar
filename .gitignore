@@ -22,3 +22,9 @@ Thumbs.db
 
 # Configuración local de Claude Code
 .claude/
+
+# Datos crudos de OpenStreetMap (se regeneran con scripts/osm/descargar.mjs)
+scripts/osm/campus.osm.json
+
+# Capturas y registros de Playwright
+.playwright-mcp/
