@@ -45,7 +45,9 @@ describe('verificarCodigo', () => {
 describe('traducirErrorAuth', () => {
   it('explica los errores más comunes', () => {
     expect(traducirErrorAuth({ message: 'email rate limit exceeded' })).toMatch(/demasiados/)
-    expect(traducirErrorAuth({ message: 'Failed to fetch' })).toMatch(/conexión/)
+    expect(traducirErrorAuth({ message: 'Failed to fetch' })).toMatch(
+      /No hay conexión con el servidor/,
+    )
     expect(traducirErrorAuth({ message: 'Solo se aceptan correos @morelia.tecnm.mx' })).toMatch(
       /institucional/,
     )

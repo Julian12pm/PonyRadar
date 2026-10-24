@@ -1,6 +1,11 @@
 // Pines guardados en Supabase: cargar, crear (con fotos) y escuchar cambios en tiempo real.
 import { supabase } from './supabase.js'
 
+/** Error con el mensaje de Supabase y su código de estado (para distinguir fallas de red). */
+function errorDe(error) {
+  return Object.assign(new Error(error.message), { status: error.status, code: error.code })
+}
+
 // Estados con los que un pin se dibuja en el mapa (los demás van a otras listas en la Fase 4)
 export const ESTADOS_EN_MAPA = ['activo', 'con_solicitud', 'aceptado']
 
@@ -48,21 +53,25 @@ export async function cargarPines() {
     .select(COLUMNAS)
     .in('estado', ESTADOS_EN_MAPA)
     .gt('expira_en', new Date().toISOString())
-  if (error) throw new Error(error.message)
+  if (error) throw errorDe(error)
   return data.map(filaAPin)
 }
 
 /**
- * Escucha pines nuevos y cambios. Llama a alCambiar(pin) con cada uno.
+ * Escucha pines nuevos y cambios. Llama a alCambiar(pin) con cada uno, y a alEstado con
+ * 'conectado' o 'desconectado' cuando cambia la conexión en tiempo real.
  * @returns {() => void} función para dejar de escuchar
  */
-export function escucharPines(alCambiar) {
+export function escucharPines(alCambiar, alEstado = () => {}) {
   const canal = supabase
     .channel('pines-del-mapa')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'pines' }, (cambio) => {
       if (cambio.new?.id) alCambiar(filaAPin(cambio.new))
     })
-    .subscribe()
+    .subscribe((estado) => {
+      if (estado === 'SUBSCRIBED') alEstado('conectado')
+      else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(estado)) alEstado('desconectado')
+    })
   return () => supabase.removeChannel(canal)
 }
 
@@ -84,7 +93,7 @@ export async function crearPin(datos) {
     p_y: datos.punto[1],
     p_dato_ciego: datos.tipo === 'verde' ? datos.datoCiego : null,
   })
-  if (error) throw new Error(error.message)
+  if (error) throw errorDe(error)
 
   if (datos.fotos?.publica) {
     const subir = (nombre, archivo) =>
@@ -127,7 +136,7 @@ export async function cargarPuntosSeguros() {
     supabase.from('puntos_seguros').select('id, nombre, zona_id').eq('activo', true),
     supabase.from('pines').select('punto_seguro_id').eq('estado', 'en_resguardo'),
   ])
-  if (error) throw new Error(error.message)
+  if (error) throw errorDe(error)
   return puntos.map((p) => ({
     id: p.id,
     nombre: p.nombre,

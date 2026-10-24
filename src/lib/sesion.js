@@ -1,5 +1,6 @@
 // Sesión del usuario: inicio con código de 6 dígitos por correo (OTP) y su perfil.
 import { useEffect, useState } from 'react'
+import { guardarLocal, leerLocal } from './conexion.js'
 import { esCorreoInstitucional } from './correo.js'
 import { supabase } from './supabase.js'
 
@@ -33,6 +34,14 @@ export function puedePublicar(perfil, ahora = new Date()) {
 }
 
 export async function cerrarSesion() {
+  // Se borran las copias locales (pines y perfil) para no dejarlas en un equipo compartido
+  try {
+    Object.keys(localStorage)
+      .filter((clave) => clave.startsWith('ponyradar:'))
+      .forEach((clave) => localStorage.removeItem(clave))
+  } catch {
+    // sin acceso al almacenamiento: no hay nada que borrar
+  }
   await supabase.auth.signOut()
 }
 
@@ -46,7 +55,9 @@ export function traducirErrorAuth(error) {
     return 'Pediste demasiados códigos. Espera un momento y vuelve a intentar.'
   }
   if (/morelia\.tecnm\.mx/.test(mensaje)) return 'Usa tu correo institucional @morelia.tecnm.mx'
-  if (/fetch|network/i.test(mensaje)) return 'Sin conexión. Revisa tu internet.'
+  if (/fetch|network/i.test(mensaje) || error?.status === 0) {
+    return 'No hay conexión con el servidor. Intenta de nuevo en un momento.'
+  }
   return mensaje || 'Algo salió mal. Intenta de nuevo.'
 }
 
@@ -62,12 +73,20 @@ export function useSesion() {
     const actualizar = async (sesion) => {
       let perfil = null
       if (sesion) {
-        const { data } = await supabase
-          .from('perfiles')
-          .select('id, correo, nombre, rol, suspendido_hasta, bloqueado')
-          .eq('id', sesion.user.id)
-          .maybeSingle()
-        perfil = data
+        const clave = `ponyradar:perfil:${sesion.user.id}`
+        try {
+          const { data, error } = await supabase
+            .from('perfiles')
+            .select('id, correo, nombre, rol, suspendido_hasta, bloqueado')
+            .eq('id', sesion.user.id)
+            .maybeSingle()
+          if (error) throw error
+          perfil = data
+          guardarLocal(clave, data)
+        } catch {
+          // Sin conexión con el servidor: se usa la última copia del perfil
+          perfil = leerLocal(clave)?.valor ?? null
+        }
       }
       if (vigente) setEstado({ cargando: false, sesion, perfil })
     }
