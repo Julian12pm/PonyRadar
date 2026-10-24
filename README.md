@@ -107,10 +107,13 @@ Las migraciones están numeradas en `supabase/migrations/` y se aplican en orden
 | `0003_crear_pines.sql`         | Funciones RPC `crear_pin` y `adjuntar_fotos`                               |
 | `0004_fotos_y_tiempo_real.sql` | Bucket privado `fotos`, sus políticas y tiempo real para `pines`           |
 | `0005_ajustes_rendimiento.sql` | Índice faltante y políticas del admin separadas por acción                 |
+| `0006_reclamos_y_entrega.sql`  | Es mío, Lo encontré, aceptar/rechazar/impostor, clave, contacto y avisos   |
 
 `supabase/seed.sql` agrega los datos de demo (semestre vigente y el punto seguro de la Biblioteca).
 
 **Seguridad:** el cliente no escribe directo en las tablas importantes; usa funciones RPC que revisan la sesión. El dato ciego y la foto nítida solo los ve quien encontró el objeto. Para comprobarlo, pega `supabase/tests/seguridad.sql` en el SQL Editor: crea dos usuarios de prueba dentro de una transacción que se revierte y muestra el resultado de cada regla.
+
+Las reglas de reclamos y entrega se prueban igual con `supabase/tests/reclamos.sql` (tres usuarios: quien encontró, el dueño y alguien más que reclama).
 
 **Inicio de sesión:** código de 6 dígitos por correo (OTP). Solo se aceptan correos `@morelia.tecnm.mx`: lo valida la app, el hook "Before User Created" y un trigger en la base de datos.
 
@@ -135,6 +138,20 @@ Pasos que se hacen a mano en el panel del proyecto (no hay contraseñas en este 
 4. **Código de 6 dígitos** (Authentication → Sign In / Providers → Email): _Email OTP Length_ = `6`.
 5. **Límite de correos** (Authentication → Rate Limits): envío de correos en `100` por hora.
 6. **Migraciones y datos de demo:** aplicar `supabase/migrations/` en orden y luego `supabase/seed.sql` (SQL Editor o Supabase CLI).
+
+## Reclamos y entrega
+
+Todo pasa en funciones RPC de `0006_reclamos_y_entrega.sql`; la app solo las llama (`src/lib/casos.js`).
+
+1. **Es mío** (pin verde ajeno): el reclamante escribe lo que solo el dueño sabría. Puede haber varias solicitudes a la vez; el pin pasa a `con_solicitud`.
+2. Quien encontró compara la respuesta con su dato ciego en **Mis casos** y elige **Aceptar**, **Rechazar** o **Impostor** (+1 strike, pide confirmación). Al aceptar, las demás solicitudes se cancelan sin strike.
+3. Tras aceptar, cada parte ve la **tarjeta de contacto** de la otra (nombre, correo y botón **Escribir en Teams**). El dueño también ve la foto nítida.
+4. El dueño pulsa **Ver mi clave de entrega**: el servidor genera 4 dígitos, los muestra una sola vez y guarda solo su hash (nadie puede leer el hash por la API). Si la olvida, pide otra.
+5. En persona, quien tiene el objeto escribe la clave. Correcta: el pin queda `entregado`. Con 5 fallos la aceptación se cancela y el pin vuelve a estar disponible.
+
+**Lo encontré** (pin rojo ajeno) crea un pin verde vinculado en el mismo lugar con el dato ciego de quien lo encontró, y avisa al dueño, que lo reclama con "Es mío". Al entregarlo, el pin rojo también se cierra.
+
+**Avisos:** se crean en el servidor (reclamos, respuestas, "Lo encontré" y pines verdes de la misma categoría y zona que un rojo tuyo), llegan en tiempo real y se cuentan en el botón **Mis casos**. Abrir `/?pin=<id>` abre ese pin en el mapa.
 
 ## Si Supabase no responde
 

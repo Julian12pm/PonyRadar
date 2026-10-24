@@ -3,6 +3,7 @@
 // Los pines vienen de Supabase y se actualizan en tiempo real. Si el servidor no responde,
 // el mapa sigue mostrando los últimos pines guardados en modo solo lectura.
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router'
 import Filtros from '../componentes/Filtros.jsx'
 import Hoja from '../componentes/Hoja.jsx'
 import HojaLugar from '../componentes/HojaLugar.jsx'
@@ -17,7 +18,11 @@ import MapaCampus from '../mapa/MapaCampus.jsx'
 import { frenteDeEdificio } from '../mapa/campus.js'
 import { detectarZona } from '../mapa/deteccion.js'
 
-export default function Mapa({ perfil }) {
+const SIN_AVISOS = { noLeidos: 0 }
+
+export default function Mapa({ perfil, avisos = SIN_AVISOS }) {
+  const navegar = useNavigate()
+  const [parametros, setParametros] = useSearchParams()
   const mapa = useRef(null)
   const { pines, seguros: puntosSeguros, enLinea, reintentar, sinConexion } = useDatosDelMapa()
   const [filtro, setFiltro] = useState({ tipo: 'todos', categoria: null })
@@ -26,7 +31,14 @@ export default function Mapa({ perfil }) {
   const [modo, setModo] = useState(null)
   // Lo que está abierto en la hoja de abajo
   const [lugar, setLugar] = useState(null)
-  const [pinAbierto, setPinAbierto] = useState(null)
+  const [pinTocado, setPinTocado] = useState(null)
+  // "/?pin=<id>" (desde Mis casos o un aviso) abre ese pin al llegar al mapa
+  const idEnlace = parametros.get('pin')
+  const pinAbierto = pinTocado ?? (idEnlace ? (pines.find((p) => p.id === idEnlace) ?? null) : null)
+  const setPinAbierto = (pin) => {
+    setPinTocado(pin)
+    if (idEnlace) setParametros({}, { replace: true })
+  }
   const [seguroAbierto, setSeguroAbierto] = useState(null)
   const [grupoAbierto, setGrupoAbierto] = useState(null) // pines encimados en el mismo punto
 
@@ -49,10 +61,11 @@ export default function Mapa({ perfil }) {
 
   const cerrarTodo = useCallback(() => {
     setLugar(null)
-    setPinAbierto(null)
+    setPinTocado(null)
+    if (parametros.has('pin')) setParametros({}, { replace: true })
     setSeguroAbierto(null)
     setGrupoAbierto(null)
-  }, [])
+  }, [parametros, setParametros])
 
   const tocarMapa = (punto) => {
     cerrarTodo()
@@ -90,7 +103,15 @@ export default function Mapa({ perfil }) {
         <div className="tarjeta mx-auto max-w-xl px-4 pt-2.5 pb-3">
           <div className="flex items-center gap-2">
             <h1 className="flex-1 text-2xl leading-tight font-extrabold">PonyRadar</h1>
-            <span className="max-w-[45%] truncate text-sm text-tinta/70">{perfil?.nombre}</span>
+            <span className="max-w-[35%] truncate text-sm text-tinta/70">{perfil?.nombre}</span>
+            <button type="button" className="chip relative" onClick={() => navegar('/casos')}>
+              Mis casos
+              {avisos.noLeidos > 0 && (
+                <span className="salto-contador" aria-label={`${avisos.noLeidos} avisos nuevos`}>
+                  {avisos.noLeidos}
+                </span>
+              )}
+            </button>
             <button type="button" className="chip" onClick={cerrarSesion}>
               Salir
             </button>
@@ -188,8 +209,12 @@ export default function Mapa({ perfil }) {
       )}
       {pinAbierto && (
         <TarjetaPin
+          key={pinAbierto.id}
           pin={pinAbierto}
-          esMio={pinAbierto.autorId === perfil?.id}
+          yo={perfil?.id}
+          habilitado={habilitado}
+          motivoSoloLectura={motivoSoloLectura}
+          onVerCasos={() => navegar('/casos')}
           onCerrar={cerrarTodo}
         />
       )}
