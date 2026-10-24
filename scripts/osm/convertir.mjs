@@ -7,7 +7,7 @@
 //
 // Solo se conserva lo que está dentro de las 3 unidades, más las calles perimetrales con nombre.
 // Los nombres, números de estacionamiento y accesos se verificaron contra el plano oficial
-// (referencia/ITM_Plano_General.pdf, página 1).
+// del ITM (Campus N° 1).
 //
 // Datos © OpenStreetMap contributors, licencia ODbL: https://www.openstreetmap.org/copyright
 
