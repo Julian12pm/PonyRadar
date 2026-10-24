@@ -111,3 +111,37 @@ describe('App', () => {
     expect(screen.getByText(/cuenta está suspendida/)).toBeInTheDocument()
   })
 })
+
+describe('App sin conexión con el servidor', () => {
+  beforeEach(() => {
+    conSesion()
+    localStorage.clear()
+  })
+
+  it('avisa, muestra los últimos pines guardados y no deja publicar', async () => {
+    const { cargarPines } = await import('./lib/pines.js')
+    const { PINES_DEMO } = await import('./mapa/demo.js')
+    // Copia local de una visita anterior y servidor caído
+    const vigentes = PINES_DEMO.map((p) => ({
+      ...p,
+      estado: 'activo',
+      expira: new Date(Date.now() + 86400000).toISOString(),
+    }))
+    localStorage.setItem('ponyradar:pines', JSON.stringify({ guardado: '', valor: vigentes }))
+    cargarPines.mockImplementation(() => Promise.reject(new TypeError('Failed to fetch')))
+    try {
+      render(<App />)
+      expect(
+        await screen.findByText('No hay conexión con el servidor, reintentando…'),
+      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Calculadora Casio/ })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Perdí algo' })).not.toBeInTheDocument()
+      expect(screen.getByText(/solo puedes ver el mapa/)).toBeInTheDocument()
+      // No se confunde con una suspensión
+      expect(screen.queryByText(/cuenta está suspendida/)).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Reintentar ahora' })).toBeInTheDocument()
+    } finally {
+      cargarPines.mockImplementation(async () => PINES_DEMO)
+    }
+  })
+})

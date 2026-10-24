@@ -135,3 +135,12 @@ Pasos que se hacen a mano en el panel del proyecto (no hay contraseñas en este 
 4. **Código de 6 dígitos** (Authentication → Sign In / Providers → Email): _Email OTP Length_ = `6`.
 5. **Límite de correos** (Authentication → Rate Limits): envío de correos en `100` por hora.
 6. **Migraciones y datos de demo:** aplicar `supabase/migrations/` en orden y luego `supabase/seed.sql` (SQL Editor o Supabase CLI).
+
+## Si Supabase no responde
+
+La app está pensada para sobrevivir a caídas de red o del servidor (`src/lib/conexion.js` y `src/lib/useDatosDelMapa.js`):
+
+- Muestra "No hay conexión con el servidor, reintentando…" y reintenta con espera creciente (1 s, 2 s, 4 s… hasta 30 s), o al momento con "Reintentar ahora" o cuando el dispositivo recupera internet.
+- El mapa sigue mostrando los últimos pines guardados en el navegador (sin los que ya caducaron) en modo solo lectura: publicar se desactiva con un mensaje.
+- Si el tiempo real se desconecta, se vuelve a suscribir solo y recarga los pines al volver.
+- Las copias locales se borran al cerrar sesión. El dato ciego nunca se guarda localmente.

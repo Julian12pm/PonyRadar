@@ -19,7 +19,8 @@ function describirZona(zona) {
  * @param {{
  *   zona: object|null,            zona detectada (null = fuera del campus)
  *   tipoInicial?: 'rojo'|'verde', si el usuario ya eligió "Perdí algo" o "Encontré algo"
- *   puedePublicar?: boolean,      false si la cuenta está suspendida
+ *   puedePublicar?: boolean,      false si la cuenta está suspendida o no hay conexión
+ *   motivoSoloLectura?: string,   por qué no se puede publicar
  *   onPublicar: (datos) => Promise<void>, recibe { tipo, categoria, titulo, descripcion, piso,
  *                                  datoCiego, fotos }; si falla, lanza un error con su mensaje
  *   onCerrar: () => void
@@ -29,6 +30,7 @@ export default function HojaLugar({
   zona,
   tipoInicial = null,
   puedePublicar = true,
+  motivoSoloLectura = 'Tu cuenta está suspendida: puedes ver el mapa, pero no publicar pines.',
   onPublicar,
   onCerrar,
 }) {
@@ -78,7 +80,7 @@ export default function HojaLugar({
   return (
     <Hoja titulo={nombreCorto(zona)} subtitulo={describirZona(zona)} onCerrar={onCerrar}>
       {!puedePublicar ? (
-        <p>Tu cuenta está suspendida: puedes ver el mapa, pero no publicar pines.</p>
+        <p>{motivoSoloLectura}</p>
       ) : !tipo ? (
         <div className="grid grid-cols-2 gap-2.5">
           <button type="button" className="boton boton-rojo" onClick={() => setTipo('rojo')}>

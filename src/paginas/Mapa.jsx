@@ -1,30 +1,25 @@
 // Pantalla principal: barra superior con filtros, mapa del campus en medio y botones abajo.
 // El mapa queda entre las dos barras para que nada lo tape ni corte edificios en la orilla.
-// Los pines vienen de Supabase y se actualizan en tiempo real.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+// Los pines vienen de Supabase y se actualizan en tiempo real. Si el servidor no responde,
+// el mapa sigue mostrando los últimos pines guardados en modo solo lectura.
+import { useCallback, useMemo, useRef, useState } from 'react'
 import Filtros from '../componentes/Filtros.jsx'
 import Hoja from '../componentes/Hoja.jsx'
 import HojaLugar from '../componentes/HojaLugar.jsx'
 import Saltos from '../componentes/Saltos.jsx'
 import TarjetaPin from '../componentes/TarjetaPin.jsx'
+import { MENSAJE_SIN_CONEXION, esErrorDeRed } from '../lib/conexion.js'
 import { filtrarPines } from '../lib/filtros.js'
-import {
-  aplicarCambio,
-  cargarPines,
-  cargarPuntosSeguros,
-  crearPin,
-  escucharPines,
-} from '../lib/pines.js'
+import { crearPin } from '../lib/pines.js'
 import { cerrarSesion, puedePublicar } from '../lib/sesion.js'
+import { useDatosDelMapa } from '../lib/useDatosDelMapa.js'
 import MapaCampus from '../mapa/MapaCampus.jsx'
 import { frenteDeEdificio } from '../mapa/campus.js'
 import { detectarZona } from '../mapa/deteccion.js'
 
 export default function Mapa({ perfil }) {
   const mapa = useRef(null)
-  const [pines, setPines] = useState([])
-  const [seguros, setSeguros] = useState([])
-  const [errorCarga, setErrorCarga] = useState('')
+  const { pines, seguros: puntosSeguros, enLinea, reintentar, sinConexion } = useDatosDelMapa()
   const [filtro, setFiltro] = useState({ tipo: 'todos', categoria: null })
   const [fueraDeVista, setFueraDeVista] = useState({})
   // modo: null, o 'rojo'/'verde' cuando el usuario pulsó "Perdí algo"/"Encontré algo"
@@ -35,33 +30,20 @@ export default function Mapa({ perfil }) {
   const [seguroAbierto, setSeguroAbierto] = useState(null)
   const [grupoAbierto, setGrupoAbierto] = useState(null) // pines encimados en el mismo punto
 
-  const habilitado = puedePublicar(perfil)
+  // Sin conexión no se puede publicar; la suspensión solo cuenta si se conoce el perfil
+  const suspendido = Boolean(perfil) && !puedePublicar(perfil)
+  const habilitado = enLinea && !suspendido
+  const motivoSoloLectura = !enLinea
+    ? 'Sin conexión con el servidor: por ahora solo puedes ver el mapa.'
+    : 'Tu cuenta está suspendida: puedes ver el mapa, pero no publicar pines.'
 
-  // Carga inicial y cambios en tiempo real
-  useEffect(() => {
-    let vigente = true
-    cargarPines()
-      .then((lista) => vigente && setPines(lista))
-      .catch(() => vigente && setErrorCarga('No se pudieron cargar los pines. Revisa tu conexión.'))
-    cargarPuntosSeguros()
-      .then(
-        (lista) =>
-          vigente &&
-          setSeguros(
-            lista
-              .map((s) => ({ ...s, punto: frenteDeEdificio(s.zonaId, 0, 7) }))
-              .filter((s) => s.punto),
-          ),
-      )
-      .catch(() => {})
-    const dejarDeEscuchar = escucharPines((pin) =>
-      setPines((anteriores) => aplicarCambio(anteriores, pin)),
-    )
-    return () => {
-      vigente = false
-      dejarDeEscuchar()
-    }
-  }, [])
+  const seguros = useMemo(
+    () =>
+      puntosSeguros
+        .map((s) => ({ ...s, punto: frenteDeEdificio(s.zonaId, 0, 7) }))
+        .filter((s) => s.punto),
+    [puntosSeguros],
+  )
 
   const visibles = useMemo(() => filtrarPines(pines, filtro), [pines, filtro])
 
@@ -74,16 +56,25 @@ export default function Mapa({ perfil }) {
 
   const tocarMapa = (punto) => {
     cerrarTodo()
-    setLugar({ punto, zona: detectarZona(punto), tipo: modo })
+    setLugar({ punto, zona: detectarZona(punto), tipo: habilitado ? modo : null })
   }
 
   // Lanza error si falla: HojaLugar lo muestra y no se cierra
   const publicar = async (datos) => {
-    await crearPin({ ...datos, punto: lugar.punto, zonaId: lugar.zona.id })
+    try {
+      await crearPin({ ...datos, punto: lugar.punto, zonaId: lugar.zona.id })
+    } catch (error) {
+      if (esErrorDeRed(error)) {
+        sinConexion()
+        throw new Error(
+          'No hay conexión con el servidor: tu pin no se publicó. Intenta de nuevo cuando vuelva.',
+          { cause: error },
+        )
+      }
+      throw error
+    }
     // El pin también llega por tiempo real; se recarga por si la conexión en vivo tarda
-    cargarPines()
-      .then(setPines)
-      .catch(() => {})
+    reintentar()
     setLugar(null)
     setModo(null)
   }
@@ -129,16 +120,20 @@ export default function Mapa({ perfil }) {
           }}
           onFueraDeVista={setFueraDeVista}
         />
-        {errorCarga && (
-          <p role="alert" className="aviso-flotante">
-            {errorCarga}
-          </p>
+        {!enLinea && (
+          <div role="status" className="aviso-flotante">
+            <p>{MENSAJE_SIN_CONEXION}</p>
+            <p className="text-xs font-normal">Mostrando los últimos pines guardados.</p>
+            <button type="button" className="mt-1 text-sm underline" onClick={reintentar}>
+              Reintentar ahora
+            </button>
+          </div>
         )}
       </section>
 
       <footer className="shrink-0 px-3 pt-2 pb-3">
         <div className="mx-auto max-w-md text-center">
-          {modo ? (
+          {modo && habilitado ? (
             <p className="pista-uso" role="status">
               Toca el mapa donde lo {modo === 'rojo' ? 'perdiste' : 'encontraste'}
             </p>
@@ -166,7 +161,7 @@ export default function Mapa({ perfil }) {
             </div>
           ) : (
             <p className="mt-2.5 rounded-2xl bg-white px-3 pt-2.5 pb-2 text-sm font-semibold">
-              Tu cuenta está suspendida: puedes ver el mapa, pero no publicar pines.
+              {motivoSoloLectura}
             </p>
           )}
           <a
@@ -186,6 +181,7 @@ export default function Mapa({ perfil }) {
           zona={lugar.zona}
           tipoInicial={lugar.tipo}
           puedePublicar={habilitado}
+          motivoSoloLectura={motivoSoloLectura}
           onPublicar={publicar}
           onCerrar={cerrarTodo}
         />
