@@ -120,6 +120,10 @@ body {
   .contador {
     @apply grid h-5 min-w-5 place-items-center rounded-full bg-pin-rojo px-1.5 pt-px text-xs text-white;
   }
+  /* Fila de las listas "Se busca" / "En resguardo" (su borde lo colorea .caso-rojo/verde) */
+  .objeto-lista {
+    @apply block w-full rounded-[16px] border-[2.5px] border-l-[9px] border-tinta bg-white px-3.5 pt-2.5 pb-2 text-left shadow-[0_3px_0_#2b3a4a22] active:translate-y-px;
+  }
   /* El borde izquierdo grueso dice de qué tipo es el pin del caso */
   .caso {
     @apply rounded-[18px] border-[2.5px] border-l-[9px] border-tinta bg-white px-3.5 pt-3 pb-3.5 shadow-[0_4px_0_#2b3a4a22];
@@ -189,9 +193,6 @@ body {
   }
   .pestana-numero {
     @apply rounded-full bg-white/80 px-1.5 text-xs text-tinta;
-  }
-  .objeto-lista {
-    @apply block w-full rounded-[16px] border-[2.5px] border-l-[9px] border-tinta bg-white px-3.5 pt-2.5 pb-2 text-left shadow-[0_3px_0_#2b3a4a22] active:translate-y-px;
   }
   .atribucion {
     @apply mt-1.5 block text-right text-[10px] text-tinta/70;
