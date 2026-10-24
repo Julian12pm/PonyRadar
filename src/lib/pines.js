@@ -2,14 +2,14 @@
 import { supabase } from './supabase.js'
 
 /** Error con el mensaje de Supabase y su código de estado (para distinguir fallas de red). */
-function errorDe(error) {
+export function errorDe(error) {
   return Object.assign(new Error(error.message), { status: error.status, code: error.code })
 }
 
 // Estados con los que un pin se dibuja en el mapa (los demás van a otras listas en la Fase 4)
 export const ESTADOS_EN_MAPA = ['activo', 'con_solicitud', 'aceptado']
 
-const COLUMNAS =
+export const COLUMNAS =
   'id, autor_id, tipo, categoria, titulo, descripcion, zona_id, piso, x, y, estado, creado_en, expira_en, foto_publica, tiene_foto_nitida'
 
 /** Convierte una fila de la tabla "pines" al formato que usa la app. */
@@ -32,9 +32,13 @@ export function filaAPin(fila) {
   }
 }
 
-/** ¿El pin se dibuja en el mapa? Solo los de estados visibles que no han caducado (72 h). */
+/**
+ * ¿El pin se dibuja en el mapa? Los activos, mientras no pasen sus 72 h. Los que tienen una
+ * solicitud pendiente o aceptada no caducan (especificación, sección 7), así que siguen visibles.
+ */
 export function seVeEnMapa(pin, ahora = new Date()) {
-  return ESTADOS_EN_MAPA.includes(pin.estado) && new Date(pin.expira) > ahora
+  if (pin.estado === 'activo') return new Date(pin.expira) > ahora
+  return ESTADOS_EN_MAPA.includes(pin.estado)
 }
 
 /**
@@ -51,8 +55,9 @@ export async function cargarPines() {
   const { data, error } = await supabase
     .from('pines')
     .select(COLUMNAS)
-    .in('estado', ESTADOS_EN_MAPA)
-    .gt('expira_en', new Date().toISOString())
+    .or(
+      `estado.in.(con_solicitud,aceptado),and(estado.eq.activo,expira_en.gt."${new Date().toISOString()}")`,
+    )
   if (error) throw errorDe(error)
   return data.map(filaAPin)
 }

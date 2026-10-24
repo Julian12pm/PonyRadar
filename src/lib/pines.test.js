@@ -73,6 +73,12 @@ describe('seVeEnMapa', () => {
     expect(seVeEnMapa(filaAPin({ ...fila, estado: 'entregado' }), ahora)).toBe(false)
     expect(seVeEnMapa(filaAPin({ ...fila, estado: 'en_resguardo' }), ahora)).toBe(false)
   })
+
+  it('los que tienen solicitud pendiente o aceptada no caducan', () => {
+    const vencido = { ...fila, expira_en: '2026-10-25T09:00:00Z' }
+    expect(seVeEnMapa(filaAPin({ ...vencido, estado: 'con_solicitud' }), ahora)).toBe(true)
+    expect(seVeEnMapa(filaAPin({ ...vencido, estado: 'aceptado' }), ahora)).toBe(true)
+  })
 })
 
 describe('aplicarCambio (tiempo real)', () => {
