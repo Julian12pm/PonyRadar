@@ -149,6 +149,19 @@ do $$ begin
 exception when others then insert into resultados (prueba, resultado) values ('solo se renueva una vez', 'sí: ' || sqlerrm);
 end $$;
 
+-- ─── "Lo encontré" en "Se busca" (caducado, dentro de 30 días) ───
+select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+insert into guardado select 'de_se_busca', public.lo_encontre((select valor::uuid from guardado where clave = 'rojo'), '', '', 'Llavero de Pumas')::text;
+insert into resultados (prueba, resultado) select '"Lo encontré" en un pin de "Se busca"', (pin_vinculado_id = (select valor::uuid from guardado where clave = 'rojo'))::text from public.pines where id = (select valor::uuid from guardado where clave = 'de_se_busca');
+reset role;
+update public.pines set expira_en = now() - interval '31 days' where id = (select valor::uuid from guardado where clave = 'rojo');
+set local role authenticated;
+do $$ begin
+  perform public.lo_encontre((select valor::uuid from guardado where clave = 'rojo'), '', '', 'Otro dato');
+  insert into resultados (prueba, resultado) values ('después de 30 días ya no', 'NO');
+exception when others then insert into resultados (prueba, resultado) values ('después de 30 días ya no', 'sí: ' || sqlerrm);
+end $$;
+
 -- ─── Reglas de tiempo: 24 h en camino y 72 h aceptado ───
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 insert into guardado select 'camino', public.crear_pin('verde', 'ropa', 'Sudadera', 'Gris', 'edificio-K', '', 4, 4, 'Bordado del Tec')::text;

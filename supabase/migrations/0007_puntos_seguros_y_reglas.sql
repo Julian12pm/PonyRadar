@@ -346,6 +346,47 @@ begin
 end;
 $$;
 
+-- ─── "Lo encontré" también en la lista "Se busca" ───────────────────────────
+-- Un pin rojo caducado sigue 30 días en "Se busca": ahí también se puede marcar "Lo encontré".
+
+create or replace function public.lo_encontre(
+  p_pin_rojo uuid, p_descripcion text, p_piso text, p_dato_ciego text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_rojo public.pines;
+  v_verde uuid;
+begin
+  select * into v_rojo from public.pines where id = p_pin_rojo;
+  if not found or v_rojo.tipo <> 'rojo' then
+    raise exception 'Solo se puede marcar "Lo encontré" en un pin rojo';
+  end if;
+  if v_rojo.autor_id = (select auth.uid()) then
+    raise exception 'Es tu propio pin';
+  end if;
+  if not (
+    (v_rojo.estado = 'activo' and v_rojo.expira_en > now())
+    or (v_rojo.estado in ('activo', 'caducado') and v_rojo.expira_en > now() - interval '30 days')
+  ) then
+    raise exception 'Este pin ya no está activo';
+  end if;
+
+  v_verde := public.crear_pin(
+    'verde', v_rojo.categoria, v_rojo.titulo, p_descripcion, v_rojo.zona_id,
+    coalesce(nullif(trim(p_piso), ''), v_rojo.piso), v_rojo.x, v_rojo.y, p_dato_ciego
+  );
+  update public.pines set pin_vinculado_id = p_pin_rojo where id = v_verde;
+  delete from public.avisos
+  where pin_id = v_verde and destinatario_id = v_rojo.autor_id and tipo = 'coincidencia';
+  perform private.avisar(v_rojo.autor_id, 'lo_encontraron', v_verde);
+  return v_verde;
+end;
+$$;
+
 -- ─── Punto seguro: dejar, confirmar, regresar, no reclamado ─────────────────
 
 /** Quien encontró deja su objeto (activo o caducado) en un punto seguro: queda en_camino. */
