@@ -2,8 +2,6 @@
 
 PWA de objetos perdidos y encontrados del **Instituto Tecnológico de Morelia**. La comunidad marca sobre un croquis del campus lo que perdió (pin rojo) o encontró (pin verde), y un sistema de reporte ciego, clave de liberación y strikes asegura que solo el dueño real recupere su objeto.
 
-La especificación completa (fuente de verdad) está en [`docs/IDEA.md`](docs/IDEA.md).
-
 ## Tecnologías
 
 React + Vite + Tailwind CSS v4 (JavaScript) · Supabase (Postgres, Auth, Storage, Realtime) · Vitest · GitHub Actions · Vercel. Todo en planes gratuitos.
@@ -41,7 +39,7 @@ npm run dev                  # abre http://localhost:5173
 
 ## Datos del mapa
 
-El croquis se dibuja con la geometría real de **OpenStreetMap** (© OpenStreetMap contributors, licencia [ODbL](https://www.openstreetmap.org/copyright); el crédito aparece en la app). El plano oficial (`referencia/ITM_Plano_General.pdf`, página 1) solo se usa para nombres de edificios, estacionamientos y accesos.
+El croquis se dibuja con la geometría real de **OpenStreetMap** (© OpenStreetMap contributors, licencia [ODbL](https://www.openstreetmap.org/copyright); el crédito aparece en la app). Los nombres de edificios, estacionamientos y accesos salen del plano oficial del ITM (Campus N° 1).
 
 Para actualizarlo: `npm run osm:descargar` y luego `npm run osm:convertir`. Los nombres que OSM no trae (leyenda del plano, números de estacionamiento, accesos) están en `src/mapa/leyenda.js` y al inicio de `scripts/osm/convertir.mjs`.
 
@@ -56,9 +54,7 @@ Después de `npm run coverage`, abre `coverage/index.html` para ver el reporte d
 ```
 .
 ├── .github/workflows/ci.yml   # CI: lint, formato, pruebas y build
-├── docs/IDEA.md               # Especificación de la beta
 ├── public/                    # Archivos estáticos (íconos)
-├── referencia/                # Plano oficial (PDF) y prototipo viejo (no se compilan)
 ├── scripts/osm/               # Descarga y conversión de los datos de OpenStreetMap
 ├── src/
 │   ├── componentes/           # Piezas de interfaz (filtros, hojas, botones de salto…)
@@ -99,3 +95,43 @@ Se guardan en `.env.local` (git lo ignora). Nunca subas llaves al repositorio.
 | ------------------------------- | --------------------------------- |
 | `VITE_SUPABASE_URL`             | Supabase → Project Settings → API |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API |
+
+## Base de datos (Supabase)
+
+Las migraciones están numeradas en `supabase/migrations/` y se aplican en orden:
+
+| Migración                      | Qué hace                                                                   |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `0001_esquema_inicial.sql`     | Tablas, tipos, RLS en todas las tablas, perfil automático y hook de correo |
+| `0002_zonas.sql`               | Zonas del mapa (se genera con `npm run zonas:sql`)                         |
+| `0003_crear_pines.sql`         | Funciones RPC `crear_pin` y `adjuntar_fotos`                               |
+| `0004_fotos_y_tiempo_real.sql` | Bucket privado `fotos`, sus políticas y tiempo real para `pines`           |
+| `0005_ajustes_rendimiento.sql` | Índice faltante y políticas del admin separadas por acción                 |
+
+`supabase/seed.sql` agrega los datos de demo (semestre vigente y el punto seguro de la Biblioteca).
+
+**Seguridad:** el cliente no escribe directo en las tablas importantes; usa funciones RPC que revisan la sesión. El dato ciego y la foto nítida solo los ve quien encontró el objeto. Para comprobarlo, pega `supabase/tests/seguridad.sql` en el SQL Editor: crea dos usuarios de prueba dentro de una transacción que se revierte y muestra el resultado de cada regla.
+
+**Inicio de sesión:** código de 6 dígitos por correo (OTP). Solo se aceptan correos `@morelia.tecnm.mx`: lo valida la app, el hook "Before User Created" y un trigger en la base de datos.
+
+## Configuración del panel de Supabase
+
+Pasos que se hacen a mano en el panel del proyecto (no hay contraseñas en este repositorio):
+
+1. **SMTP propio** (Authentication → Emails → SMTP Settings): activar "Custom SMTP" con la cuenta de Microsoft 365 del Tec.
+   - Host: `smtp.office365.com` · Puerto: `587`
+   - Usuario y contraseña: los de la cuenta que envía los correos (se escriben solo en el panel).
+   - Remitente: esa misma cuenta institucional.
+2. **Plantillas de correo** (Authentication → Emails → Templates): en **Magic link** y en **Confirm sign up**, poner el código con `{{ .Token }}`:
+   - Asunto: `Tu código de PonyRadar`
+   - Cuerpo:
+     ```html
+     <h2>Tu código para entrar a PonyRadar</h2>
+     <p>Escribe este código en la app:</p>
+     <p style="font-size:32px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+     <p>Si no lo pediste, ignora este correo.</p>
+     ```
+3. **Hook de registro** (Authentication → Hooks → Before User Created): tipo "Postgres", esquema `public`, función `hook_solo_correo_institucional`.
+4. **Código de 6 dígitos** (Authentication → Sign In / Providers → Email): _Email OTP Length_ = `6`.
+5. **Límite de correos** (Authentication → Rate Limits): envío de correos en `100` por hora.
+6. **Migraciones y datos de demo:** aplicar `supabase/migrations/` en orden y luego `supabase/seed.sql` (SQL Editor o Supabase CLI).

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { zonaPorId } from '../mapa/zonas.js'
 import Filtros from './Filtros.jsx'
 import HojaLugar from './HojaLugar.jsx'
@@ -29,8 +29,8 @@ describe('HojaLugar', () => {
     expect(screen.getByRole('heading', { name: 'Fuera del campus' })).toBeInTheDocument()
   })
 
-  it('muestra el edificio y publica un pin rojo con piso y categoría', () => {
-    const onPublicar = vi.fn()
+  it('muestra el edificio y publica un pin rojo con piso y categoría', async () => {
+    const onPublicar = vi.fn(async () => {})
     render(<HojaLugar zona={zonaPorId('edificio-K')} onPublicar={onPublicar} onCerrar={vi.fn()} />)
     expect(screen.getByRole('heading', { name: 'Edificio K' })).toBeInTheDocument()
     expect(screen.getByText(/Aulas y Delegación Sindical/)).toBeInTheDocument()
@@ -45,15 +45,80 @@ describe('HojaLugar', () => {
     fireEvent.change(screen.getByLabelText('Categoría'), { target: { value: 'llaves' } })
     fireEvent.change(screen.getByLabelText('¿Qué perdiste?'), { target: { value: '  Llaves  ' } })
     expect(publicar).toBeEnabled()
+    // Un pin rojo no pide dato ciego
+    expect(screen.queryByLabelText(/Dato ciego/)).not.toBeInTheDocument()
     fireEvent.click(publicar)
 
-    expect(onPublicar).toHaveBeenCalledWith({
-      tipo: 'rojo',
-      categoria: 'llaves',
-      titulo: 'Llaves',
-      descripcion: '',
-      piso: 'K-12',
+    await waitFor(() =>
+      expect(onPublicar).toHaveBeenCalledWith({
+        tipo: 'rojo',
+        categoria: 'llaves',
+        titulo: 'Llaves',
+        descripcion: '',
+        piso: 'K-12',
+        datoCiego: null,
+        fotos: null,
+      }),
+    )
+  })
+
+  it('un pin verde exige dato ciego y muestra la guía de foto de su categoría', async () => {
+    const onPublicar = vi.fn(async () => {})
+    render(
+      <HojaLugar
+        zona={zonaPorId('alberca')}
+        tipoInicial="verde"
+        onPublicar={onPublicar}
+        onCerrar={vi.fn()}
+      />,
+    )
+    fireEvent.change(screen.getByLabelText('Categoría'), { target: { value: 'mochilas' } })
+    expect(screen.getByText(/Cerrada y sin mostrar/)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('¿Qué encontraste?'), { target: { value: 'Mochila' } })
+    const publicar = screen.getByRole('button', { name: /Publicar pin verde/ })
+    expect(publicar).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText(/Dato ciego/), {
+      target: { value: 'Tiene un llavero de Pikachu' },
     })
+    fireEvent.click(publicar)
+    await waitFor(() =>
+      expect(onPublicar).toHaveBeenCalledWith(
+        expect.objectContaining({ tipo: 'verde', datoCiego: 'Tiene un llavero de Pikachu' }),
+      ),
+    )
+  })
+
+  it('si falla la publicación muestra el error y no se cierra', async () => {
+    const onPublicar = vi.fn(async () => {
+      throw new Error('Tu cuenta está suspendida')
+    })
+    render(
+      <HojaLugar
+        zona={zonaPorId('alberca')}
+        tipoInicial="rojo"
+        onPublicar={onPublicar}
+        onCerrar={vi.fn()}
+      />,
+    )
+    fireEvent.change(screen.getByLabelText('Categoría'), { target: { value: 'otros' } })
+    fireEvent.change(screen.getByLabelText('¿Qué perdiste?'), { target: { value: 'Paraguas' } })
+    fireEvent.click(screen.getByRole('button', { name: /Publicar pin rojo/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Tu cuenta está suspendida')
+    expect(screen.getByRole('button', { name: /Publicar pin rojo/ })).toBeEnabled()
+  })
+
+  it('con la cuenta suspendida no deja publicar', () => {
+    render(
+      <HojaLugar
+        zona={zonaPorId('edificio-K')}
+        puedePublicar={false}
+        onPublicar={vi.fn()}
+        onCerrar={vi.fn()}
+      />,
+    )
+    expect(screen.getByText(/cuenta está suspendida/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Perdí algo aquí' })).not.toBeInTheDocument()
   })
 
   it('en un exterior no pregunta piso y respeta el tipo ya elegido', () => {

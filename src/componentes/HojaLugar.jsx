@@ -1,6 +1,8 @@
-// Hoja que aparece al tocar el mapa: dice dónde cayó el toque y permite crear un pin de prueba.
+// Hoja que aparece al tocar el mapa: dice dónde cayó el toque y permite publicar un pin.
+// Pin rojo: "Perdí algo aquí". Pin verde: "Encontré esto" con dato ciego y foto desenfocada.
 import { useState } from 'react'
 import { CATEGORIAS } from '../lib/categorias.js'
+import { GUIAS_FOTO, prepararFotos } from '../lib/fotos.js'
 import { campus } from '../mapa/campus.js'
 import { nombreCorto } from '../mapa/zonas.js'
 import Hoja from './Hoja.jsx'
@@ -15,18 +17,30 @@ function describirZona(zona) {
 
 /**
  * @param {{
- *   zona: object|null,           zona detectada (null = fuera del campus)
+ *   zona: object|null,            zona detectada (null = fuera del campus)
  *   tipoInicial?: 'rojo'|'verde', si el usuario ya eligió "Perdí algo" o "Encontré algo"
- *   onPublicar: (datos) => void, recibe { tipo, categoria, titulo, descripcion, piso }
+ *   puedePublicar?: boolean,      false si la cuenta está suspendida
+ *   onPublicar: (datos) => Promise<void>, recibe { tipo, categoria, titulo, descripcion, piso,
+ *                                  datoCiego, fotos }; si falla, lanza un error con su mensaje
  *   onCerrar: () => void
  * }} props
  */
-export default function HojaLugar({ zona, tipoInicial = null, onPublicar, onCerrar }) {
+export default function HojaLugar({
+  zona,
+  tipoInicial = null,
+  puedePublicar = true,
+  onPublicar,
+  onCerrar,
+}) {
   const [tipo, setTipo] = useState(tipoInicial)
   const [categoria, setCategoria] = useState('')
   const [titulo, setTitulo] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [piso, setPiso] = useState('')
+  const [datoCiego, setDatoCiego] = useState('')
+  const [foto, setFoto] = useState(null)
+  const [ocupado, setOcupado] = useState(false)
+  const [error, setError] = useState('')
 
   if (!zona) {
     return (
@@ -36,22 +50,36 @@ export default function HojaLugar({ zona, tipoInicial = null, onPublicar, onCerr
     )
   }
 
-  const listo = categoria && titulo.trim().length >= 3
-  const publicar = (e) => {
+  const esVerde = tipo === 'verde'
+  const listo = categoria && titulo.trim().length >= 3 && (!esVerde || datoCiego.trim().length >= 3)
+
+  const publicar = async (e) => {
     e.preventDefault()
-    if (!listo) return
-    onPublicar({
-      tipo,
-      categoria,
-      titulo: titulo.trim(),
-      descripcion: descripcion.trim(),
-      piso: piso.trim(),
-    })
+    if (!listo || ocupado) return
+    setOcupado(true)
+    setError('')
+    try {
+      const fotos = foto ? await prepararFotos(foto, tipo) : null
+      await onPublicar({
+        tipo,
+        categoria,
+        titulo: titulo.trim(),
+        descripcion: descripcion.trim(),
+        piso: piso.trim(),
+        datoCiego: esVerde ? datoCiego.trim() : null,
+        fotos,
+      })
+    } catch (err) {
+      setError(err.message || 'No se pudo publicar. Intenta de nuevo.')
+      setOcupado(false)
+    }
   }
 
   return (
     <Hoja titulo={nombreCorto(zona)} subtitulo={describirZona(zona)} onCerrar={onCerrar}>
-      {!tipo ? (
+      {!puedePublicar ? (
+        <p>Tu cuenta está suspendida: puedes ver el mapa, pero no publicar pines.</p>
+      ) : !tipo ? (
         <div className="grid grid-cols-2 gap-2.5">
           <button type="button" className="boton boton-rojo" onClick={() => setTipo('rojo')}>
             Perdí algo aquí
@@ -87,13 +115,13 @@ export default function HojaLugar({ zona, tipoInicial = null, onPublicar, onCerr
             </select>
           </label>
           <label className="campo">
-            <span>{tipo === 'rojo' ? '¿Qué perdiste?' : '¿Qué encontraste?'}</span>
+            <span>{esVerde ? '¿Qué encontraste?' : '¿Qué perdiste?'}</span>
             <input
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
               maxLength={60}
               required
-              placeholder={tipo === 'rojo' ? 'Ej. Calculadora Casio' : 'Ej. Calculadora'}
+              placeholder={esVerde ? 'Ej. Calculadora' : 'Ej. Calculadora Casio'}
             />
           </label>
           <label className="campo">
@@ -104,22 +132,74 @@ export default function HojaLugar({ zona, tipoInicial = null, onPublicar, onCerr
               maxLength={280}
               rows={2}
               placeholder={
-                tipo === 'verde'
-                  ? 'Descríbelo de forma vaga; los detalles que lo identifican se guardan aparte'
+                esVerde
+                  ? 'Vaga: color o tipo general. Lo que lo identifica va en el dato ciego.'
                   : 'Color, marca, dónde estabas…'
               }
             />
           </label>
+
+          {esVerde && (
+            <label className="campo">
+              <span>Dato ciego (solo tú lo verás)</span>
+              <input
+                value={datoCiego}
+                onChange={(e) => setDatoCiego(e.target.value)}
+                maxLength={200}
+                required
+                placeholder="Algo que solo el dueño sabría: una calcomanía, un nombre…"
+              />
+              <small className="font-normal text-tinta/65">
+                Quien reclame el objeto tendrá que adivinarlo. No lo pongas en la descripción.
+              </small>
+            </label>
+          )}
+
+          <div className="campo">
+            <span>Foto (opcional)</span>
+            {/* La guía va fuera de la etiqueta y se asocia con aria-describedby */}
+            {esVerde && (
+              <p id="guia-foto" className="guia-foto">
+                {categoria
+                  ? GUIAS_FOTO[categoria]
+                  : 'Elige la categoría para ver cómo tomar la foto.'}
+              </p>
+            )}
+            {/* El selector nativo dice "Choose file" en inglés: se oculta y se usa un botón propio */}
+            <label htmlFor="foto-pin" className="boton-archivo">
+              {foto ? `Cambiar foto (${foto.name})` : 'Tomar o elegir foto'}
+            </label>
+            <input
+              id="foto-pin"
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              aria-describedby={esVerde ? 'guia-foto' : undefined}
+              onChange={(e) => setFoto(e.target.files?.[0] ?? null)}
+            />
+            {esVerde && (
+              <small className="font-normal text-tinta/65">
+                En el mapa se publica muy desenfocada; la foto nítida solo la ves tú.
+              </small>
+            )}
+          </div>
+
+          {error && (
+            <p
+              role="alert"
+              className="rounded-xl bg-pin-rojo/12 px-3 pt-2 pb-1.5 text-sm font-semibold"
+            >
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
-            className={`boton ${tipo === 'rojo' ? 'boton-rojo' : 'boton-verde'}`}
-            disabled={!listo}
+            className={`boton ${esVerde ? 'boton-verde' : 'boton-rojo'}`}
+            disabled={!listo || ocupado}
           >
-            Publicar pin {tipo === 'rojo' ? 'rojo' : 'verde'}
+            {ocupado ? 'Publicando…' : `Publicar pin ${esVerde ? 'verde' : 'rojo'}`}
           </button>
-          <p className="text-center text-xs text-tinta/60">
-            Versión de prueba: el pin se guarda solo en este navegador hasta que recargues.
-          </p>
         </form>
       )}
     </Hoja>

@@ -1,4 +1,4 @@
-// Categorías de objetos (sección 6 de docs/IDEA.md).
+// Categorías de objetos que se pueden reportar.
 
 export const CATEGORIAS = [
   { id: 'electronicos', nombre: 'Electrónicos' },

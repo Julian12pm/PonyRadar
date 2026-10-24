@@ -85,6 +85,21 @@ body {
   .etiqueta-tipo {
     @apply rounded-full px-2.5 pt-0.5 text-sm font-bold text-white;
   }
+  .boton-archivo {
+    @apply cursor-pointer truncate rounded-xl border-2 border-dashed border-tinta/40 bg-white px-3 pt-2 pb-1.5 text-center font-bold;
+  }
+  .boton-archivo:has(+ input:focus-visible) {
+    @apply outline-2 outline-offset-2 outline-tinta;
+  }
+  .guia-foto {
+    @apply rounded-xl bg-[#fff4d6] px-3 pt-1.5 pb-1 font-semibold;
+  }
+  .privado {
+    @apply rounded-2xl border-2 border-dashed border-tinta/30 bg-[#f4f7f9] px-3 pt-2.5 pb-3;
+  }
+  .aviso-flotante {
+    @apply absolute inset-x-3 top-2 mx-auto max-w-md rounded-xl bg-white px-3 pt-2 pb-1.5 text-center text-sm font-semibold shadow;
+  }
   .fila-pin {
     @apply flex w-full items-center gap-2.5 rounded-xl bg-[#eef3f6] px-3 pt-2 pb-1.5 text-left font-semibold;
   }
