@@ -1,0 +1,92 @@
+# PonyRadar
+
+PWA de objetos perdidos y encontrados del **Instituto Tecnológico de Morelia**. La comunidad marca sobre un croquis del campus lo que perdió (pin rojo) o encontró (pin verde), y un sistema de reporte ciego, clave de liberación y strikes asegura que solo el dueño real recupere su objeto.
+
+La especificación completa (fuente de verdad) está en [`docs/IDEA.md`](docs/IDEA.md).
+
+## Tecnologías
+
+React + Vite + Tailwind CSS v4 (JavaScript) · Supabase (Postgres, Auth, Storage, Realtime) · Vitest · GitHub Actions · Vercel. Todo en planes gratuitos.
+
+## Requisitos
+
+- [Node.js](https://nodejs.org/) 22 o superior (el CI usa Node 24).
+- Git.
+
+## Instalar y correr
+
+```bash
+git clone https://github.com/Julian12pm/PonyRadar.git
+cd PonyRadar
+npm install
+cp .env.example .env.local   # luego llena las variables de Supabase
+npm run dev                  # abre http://localhost:5173
+```
+
+## Comandos
+
+| Comando                | Qué hace                                         |
+| ---------------------- | ------------------------------------------------ |
+| `npm run dev`          | Servidor de desarrollo con recarga automática    |
+| `npm run build`        | Genera la versión de producción en `dist/`       |
+| `npm run preview`      | Sirve `dist/` para probar el build               |
+| `npm run lint`         | Revisa el código con ESLint                      |
+| `npm run format`       | Da formato a todo con Prettier                   |
+| `npm run format:check` | Verifica el formato sin cambiar nada (lo usa CI) |
+| `npm test`             | Corre las pruebas una vez                        |
+| `npm run test:watch`   | Corre las pruebas cada vez que guardas           |
+| `npm run coverage`     | Pruebas + reporte de cobertura en `coverage/`    |
+
+## Pruebas
+
+Las pruebas usan **Vitest** y **Testing Library**, y viven junto al archivo que prueban (`correo.js` → `correo.test.js`). La lógica importante (detección de zona, strikes, caducidad, enlace de Teams, validación de correo) se escribe como funciones puras en `src/lib/` o `src/mapa/` para poder probarla sin navegador ni base de datos.
+
+Después de `npm run coverage`, abre `coverage/index.html` para ver el reporte de cobertura.
+
+## Estructura de carpetas
+
+```
+.
+├── .github/workflows/ci.yml   # CI: lint, formato, pruebas y build
+├── docs/IDEA.md               # Especificación de la beta
+├── public/                    # Archivos estáticos (íconos)
+├── referencia/prototipo/      # Prototipo viejo, solo inspiración (no se compila)
+├── src/
+│   ├── componentes/           # Piezas de interfaz reutilizables
+│   ├── paginas/               # Pantallas completas (una por ruta)
+│   ├── mapa/                  # Croquis SVG, zonas (zonas.js) y lógica del mapa
+│   ├── lib/                   # Funciones puras y cliente de Supabase
+│   ├── test/setup.js          # Configuración común de las pruebas
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css              # Tailwind y colores del tema
+├── supabase/
+│   ├── migrations/            # Migraciones SQL numeradas
+│   └── seed.sql               # Datos de demo
+├── .env.example               # Variables necesarias (sin valores)
+└── vite.config.js             # Vite + configuración de Vitest
+```
+
+## Ramas y flujo de trabajo
+
+- `main`: solo lo que funciona. Vercel la publica en producción.
+- `dev`: rama de integración.
+- `feat/<nombre>`: una rama por funcionalidad, creada desde `dev`. Se integra con un pull request hacia `dev`; cuando `dev` está estable se hace PR de `dev` a `main`.
+
+Cada push y PR hacia `dev` o `main` corre el CI. Vercel crea una vista previa por cada PR.
+
+## Convenciones
+
+- **Ramas:** `feat/<nombre-corto>` para funcionalidades, `fix/<nombre-corto>` para correcciones (en minúsculas y con guiones, p. ej. `feat/mapa-croquis`).
+- **Commits:** pequeños, en español y en imperativo (p. ej. `Agrega detección de zona en el mapa`).
+- **Código:** JavaScript, nombres y comentarios en español. Componentes en `PascalCase.jsx`, funciones y variables en `camelCase`, constantes en `MAYUSCULAS`.
+- **Base de datos:** tablas y columnas en `snake_case` y en español; migraciones numeradas (`0001_inicial.sql`, `0002_...`).
+
+## Variables de entorno
+
+Se guardan en `.env.local` (git lo ignora). Nunca subas llaves al repositorio.
+
+| Variable                        | Dónde se obtiene                  |
+| ------------------------------- | --------------------------------- |
+| `VITE_SUPABASE_URL`             | Supabase → Project Settings → API |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API |
