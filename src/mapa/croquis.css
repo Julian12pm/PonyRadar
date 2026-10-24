@@ -362,3 +362,42 @@
   font-size: 15px;
   white-space: nowrap;
 }
+
+/* Los pines, burbujas y puntos seguros son botones sin estilo propio */
+.marcador-boton {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.marcador-boton:focus-visible {
+  outline: 3px solid #2b3a4a;
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+
+/* Aro en el punto que se tocó (mientras la hoja de abajo está abierta) */
+.marcador-elegido {
+  pointer-events: none;
+}
+.punto-elegido {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #2b3a4a;
+  background: #ffffffaa;
+  box-shadow: 0 0 0 4px #ffffff88;
+  animation: latido 1.4s ease-in-out infinite;
+}
+@keyframes latido {
+  50% {
+    box-shadow: 0 0 0 10px #ffffff00;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .punto-elegido {
+    animation: none;
+  }
+}

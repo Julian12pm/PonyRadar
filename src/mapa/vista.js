@@ -46,6 +46,20 @@ export function rellenar(foco, contenido, pantalla) {
   }
 }
 
+/**
+ * Convierte la posición de un toque en pantalla a metros del mapa.
+ * @param {{x:number, y:number}} toque posición en pantalla (clientX, clientY)
+ * @param {{left:number, top:number, width:number}} rect rectángulo del croquis ya transformado
+ * @param {{x:number, y:number, ancho:number}} limites área del dibujo en metros
+ */
+export function pantallaAMetros(toque, rect, limites) {
+  const pxPorMetro = rect.width / limites.ancho
+  return [
+    limites.x + (toque.x - rect.left) / pxPorMetro,
+    limites.y + (toque.y - rect.top) / pxPorMetro,
+  ]
+}
+
 /** Rectángulo del contenido (en píxeles a escala 1) que se ve en pantalla. */
 export function areaVisible({ escala, x, y }, pantalla) {
   return {

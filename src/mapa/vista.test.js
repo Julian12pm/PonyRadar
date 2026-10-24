@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { areaVisible, encuadrar, nivelDetalle, nivelLetras, rellenar } from './vista.js'
+import {
+  areaVisible,
+  encuadrar,
+  nivelDetalle,
+  nivelLetras,
+  pantallaAMetros,
+  rellenar,
+} from './vista.js'
 
 describe('rellenar', () => {
   const contenido = { ancho: 600, alto: 600 }
@@ -22,6 +29,16 @@ describe('rellenar', () => {
     const esquina = rellenar({ x0: 0, y0: 0, x1: 100, y1: 100 }, contenido, pantalla)
     expect(esquina.x).toBe(0)
     expect(esquina.y).toBe(0)
+  })
+})
+
+describe('pantallaAMetros', () => {
+  it('convierte un toque a metros considerando zoom y desplazamiento', () => {
+    // El croquis (600 m de ancho) se ve a 2 px/m y su esquina está en (-100, 50) de la pantalla
+    const rect = { left: -100, top: 50, width: 1200 }
+    const limites = { x: -300, y: -300, ancho: 600 }
+    expect(pantallaAMetros({ x: -100, y: 50 }, rect, limites)).toEqual([-300, -300])
+    expect(pantallaAMetros({ x: 100, y: 250 }, rect, limites)).toEqual([-200, -200])
   })
 })
 

@@ -168,7 +168,7 @@ const salida = {
 }
 const sinNumero = [] // estacionamientos que se nombran al final
 
-let canchaNum = 0
+const canchasPorDeporte = {}
 for (const via of vias.values()) {
   const t = via.tags ?? {}
   const puntos = puntosDe(via)
@@ -222,7 +222,6 @@ for (const via of vias.values()) {
   } else if (via.id === ALBERCA) {
     salida.alberca = { id: 'alberca', nombre: 'Alberca', puntos }
   } else if (t.leisure === 'pitch') {
-    canchaNum++
     const deporte = t.sport?.includes('basketball')
       ? 'basquet'
       : t.sport?.includes('volleyball')
@@ -233,7 +232,10 @@ for (const via of vias.values()) {
       voleibol: 'Cancha de voleibol',
       futbol: 'Cancha',
     }
-    salida.canchas.push({ id: `cancha-${canchaNum}`, deporte, nombre: nombre[deporte], puntos })
+    // Se numeran por deporte: cancha-basquet-1, cancha-basquet-2, cancha-voleibol-1…
+    canchasPorDeporte[deporte] = (canchasPorDeporte[deporte] ?? 0) + 1
+    const id = `cancha-${deporte}-${canchasPorDeporte[deporte]}`
+    salida.canchas.push({ id, deporte, nombre: nombre[deporte], puntos })
   } else if (
     (t.landuse === 'grass' || t.leisure === 'park' || t.leisure === 'garden') &&
     via.nodes[0] === via.nodes.at(-1)

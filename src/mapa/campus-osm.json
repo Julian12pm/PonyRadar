@@ -961,7 +961,7 @@
   ],
   "canchas": [
     {
-      "id": "cancha-1",
+      "id": "cancha-basquet-1",
       "deporte": "basquet",
       "nombre": "Cancha de básquet",
       "puntos": [
@@ -972,7 +972,7 @@
       ]
     },
     {
-      "id": "cancha-2",
+      "id": "cancha-basquet-2",
       "deporte": "basquet",
       "nombre": "Cancha de básquet",
       "puntos": [
@@ -983,7 +983,7 @@
       ]
     },
     {
-      "id": "cancha-3",
+      "id": "cancha-basquet-3",
       "deporte": "basquet",
       "nombre": "Cancha de básquet",
       "puntos": [
@@ -994,7 +994,7 @@
       ]
     },
     {
-      "id": "cancha-4",
+      "id": "cancha-basquet-4",
       "deporte": "basquet",
       "nombre": "Cancha de básquet",
       "puntos": [
@@ -1005,7 +1005,7 @@
       ]
     },
     {
-      "id": "cancha-5",
+      "id": "cancha-basquet-5",
       "deporte": "basquet",
       "nombre": "Cancha de básquet",
       "puntos": [
@@ -1016,7 +1016,7 @@
       ]
     },
     {
-      "id": "cancha-6",
+      "id": "cancha-voleibol-1",
       "deporte": "voleibol",
       "nombre": "Cancha de voleibol",
       "puntos": [
@@ -1027,7 +1027,7 @@
       ]
     },
     {
-      "id": "cancha-7",
+      "id": "cancha-voleibol-2",
       "deporte": "voleibol",
       "nombre": "Cancha de voleibol",
       "puntos": [
