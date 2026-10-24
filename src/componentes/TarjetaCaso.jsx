@@ -1,13 +1,16 @@
 // Un caso en "Mis casos": el objeto, en qué va y lo que te toca hacer.
 //   · Encontré (pin verde mío): revisar solicitudes y, tras aceptar, escribir la clave del dueño.
 //   · Reclamé (mi solicitud): tras ser aceptado, ver la clave y la foto nítida.
-//   · Perdí (pin rojo mío): ver los pines que alguien creó con "Lo encontré".
+//   · Perdí (pin rojo mío): ver los pines que alguien creó con "Lo encontré" y renovarlo.
+//   · Fase 4: dejar el objeto en un punto seguro y renovar un pin rojo vencido.
 import { useEffect, useState } from 'react'
 import { nombreCategoria } from '../lib/categorias.js'
 import {
   MAXIMO_INTENTOS,
   accionPendiente,
+  dejarEnPuntoSeguro,
   generarClave,
+  renovarPin,
   resumenCaso,
   responderSolicitud,
   solicitudEnEntrega,
@@ -202,13 +205,81 @@ function VerClave({ solicitud }) {
   )
 }
 
-export default function TarjetaCaso({ caso, onCambio, onVerPin }) {
+/** Quien encontró elige un punto seguro y deja ahí el objeto (queda "en camino"). */
+function LlevarAPunto({ pin, puntos, destacado, onCambio }) {
+  const [abierto, setAbierto] = useState(destacado)
+  const [punto, setPunto] = useState(puntos[0]?.id ?? '')
+  const { ocupado, error, correr } = useAccion(onCambio)
+
+  if (!abierto) {
+    return (
+      <button type="button" className="enlace-accion mt-2" onClick={() => setAbierto(true)}>
+        Dejar en un punto seguro
+      </button>
+    )
+  }
+  return (
+    <div className="mt-3 grid gap-2">
+      <label className="campo">
+        Punto seguro
+        <select value={punto} onChange={(e) => setPunto(e.target.value)}>
+          {puntos.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.nombre}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="text-sm text-tinta/70">
+        Cuando el personal confirme que lo recibió, ya no será tu responsabilidad. Si el dueño lo
+        reclama, se lo entregan ahí.
+      </p>
+      <button
+        type="button"
+        className="boton boton-verde w-full"
+        disabled={ocupado || !punto}
+        onClick={() => correr(() => dejarEnPuntoSeguro(pin.id, punto))}
+      >
+        Lo llevo a este punto seguro
+      </button>
+      {error && <p className="text-sm text-pin-rojo">{error}</p>}
+    </div>
+  )
+}
+
+/** El dueño de un pin rojo vencido lo vuelve a poner en el mapa 72 h (una sola vez). */
+function Renovar({ pin, onCambio }) {
+  const { ocupado, error, correr } = useAccion(onCambio)
+  return (
+    <div className="mt-2.5">
+      <button
+        type="button"
+        className="boton boton-rojo w-full"
+        disabled={ocupado}
+        onClick={() => correr(() => renovarPin(pin.id))}
+      >
+        Renovar 72 horas en el mapa
+      </button>
+      {error && <p className="mt-1.5 text-sm text-pin-rojo">{error}</p>}
+    </div>
+  )
+}
+
+export default function TarjetaCaso({ caso, puntos = [], onCambio, onVerPin }) {
   const { pin, papel } = caso
   const accion = accionPendiente(caso)
   const enEntrega = papel === 'encontre' ? solicitudEnEntrega(caso) : null
   const pendientes =
     papel === 'encontre' ? caso.solicitudes.filter((s) => s.estado === 'pendiente') : []
   const aceptadoComoDueno = papel === 'reclame' && accion === 'clave'
+  // Puede llevarlo a un punto seguro si sigue con él y nadie lo está reclamando
+  const puedeLlevar =
+    papel === 'encontre' &&
+    ['activo', 'caducado'].includes(pin.estado) &&
+    !caso.solicitudes.some(
+      (s) => s.estado === 'pendiente' || (s.estado === 'aceptada' && !s.entregada),
+    ) &&
+    puntos.length > 0
   const [privado, setPrivado] = useState({ dato: null, foto: null })
 
   // Dato ciego para comparar (quien encontró) o foto nítida (dueño aceptado)
@@ -280,15 +351,26 @@ export default function TarjetaCaso({ caso, onCambio, onVerPin }) {
         </>
       )}
 
+      {puedeLlevar && (
+        <LlevarAPunto
+          pin={pin}
+          puntos={puntos}
+          destacado={accion === 'llevar'}
+          onCambio={onCambio}
+        />
+      )}
+
+      {accion === 'renovar' && <Renovar pin={pin} onCambio={onCambio} />}
+
       {accion === 'reclamar' &&
         caso.encontrados
-          .filter((v) => ['activo', 'con_solicitud'].includes(v.estado))
+          .filter((v) => ['activo', 'con_solicitud', 'en_resguardo'].includes(v.estado))
           .map((v) => (
             <button
               key={v.id}
               type="button"
               className="boton-chico mt-2 w-full"
-              onClick={() => onVerPin(v.id)}
+              onClick={() => onVerPin(v.id, v.estado)}
             >
               Ver lo que encontraron
             </button>

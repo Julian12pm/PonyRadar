@@ -171,6 +171,28 @@ body {
   .clave span:nth-child(4) {
     animation-delay: 180ms;
   }
+  /* ─── Fase 4: listas, avisos de cuenta y acciones secundarias ─── */
+  .aviso-cuenta {
+    @apply rounded-2xl border-2 border-pin-rojo bg-[#fde7e8] px-3.5 pt-2.5 pb-2 font-semibold;
+  }
+  .enlace-accion {
+    @apply text-sm font-bold underline decoration-2 underline-offset-2;
+  }
+  .pestanas {
+    @apply grid grid-cols-2 gap-1 rounded-full bg-[#eef3f6] p-1;
+  }
+  .pestana {
+    @apply flex items-center justify-center gap-1.5 rounded-full px-2 pt-1 pb-0.5 font-bold;
+  }
+  .pestana-activa {
+    @apply bg-tinta text-white;
+  }
+  .pestana-numero {
+    @apply rounded-full bg-white/80 px-1.5 text-xs text-tinta;
+  }
+  .objeto-lista {
+    @apply block w-full rounded-[16px] border-[2.5px] border-l-[9px] border-tinta bg-white px-3.5 pt-2.5 pb-2 text-left shadow-[0_3px_0_#2b3a4a22] active:translate-y-px;
+  }
   .atribucion {
     @apply mt-1.5 block text-right text-[10px] text-tinta/70;
   }

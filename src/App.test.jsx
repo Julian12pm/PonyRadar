@@ -44,6 +44,37 @@ vi.mock('./lib/casos.js', async (original) => ({
   solicitarPin: vi.fn(async () => 'sol-1'),
   loEncontre: vi.fn(async () => 'verde-1'),
   cargarCasos: vi.fn(async () => []),
+  cargarPuntosActivos: vi.fn(async () => [{ id: 'p1', nombre: 'Biblioteca (AF)' }]),
+  misStrikes: vi.fn(async () => 0),
+  cargarListas: vi.fn(async () => ({
+    seBusca: [
+      {
+        id: 'r-viejo',
+        autorId: 'otro',
+        tipo: 'rojo',
+        categoria: 'mochilas',
+        titulo: 'Mochila negra Jansport',
+        zonaId: 'edificio-K',
+        estado: 'caducado',
+        creado: new Date(Date.now() - 5 * 86400000).toISOString(),
+        expira: new Date(Date.now() - 2 * 86400000).toISOString(),
+      },
+    ],
+    enResguardo: [
+      {
+        id: 'v-guardado',
+        autorId: 'otro',
+        tipo: 'verde',
+        categoria: 'electronicos',
+        titulo: 'Calculadora',
+        zonaId: 'edificio-K',
+        estado: 'en_resguardo',
+        puntoSeguroId: 'p1',
+        creado: new Date().toISOString(),
+      },
+    ],
+    puntos: [{ id: 'p1', nombre: 'Biblioteca (AF)' }],
+  })),
 }))
 
 const { default: App } = await import('./App.jsx')
@@ -78,7 +109,11 @@ const pinesEnMapa = (tipo) =>
   screen.queryAllByRole('button', { name: new RegExp(`^${tipo}:`) }).length
 
 describe('App', () => {
-  beforeEach(() => conSesion())
+  beforeEach(() => {
+    // Cada prueba empieza en el mapa (el router usa la URL real de jsdom)
+    window.history.replaceState(null, '', '/')
+    conSesion()
+  })
 
   it('sin sesión muestra el inicio de sesión', () => {
     estado.sesion = { cargando: false, sesion: null, perfil: null }
@@ -174,17 +209,47 @@ describe('App', () => {
     expect(await screen.findByRole('button', { name: /Calculadora Casio/ })).toBeInTheDocument()
   })
 
+  it('"Listas" muestra "Se busca" y "En resguardo"; desde ahí se reclama', async () => {
+    render(<App />)
+    await screen.findByRole('button', { name: /Calculadora Casio/ })
+    fireEvent.click(screen.getByRole('button', { name: 'Listas' }))
+    expect(await screen.findByRole('tab', { name: /Se busca/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    fireEvent.click(await screen.findByRole('button', { name: /Mochila negra Jansport/ }))
+    const hojaRoja = screen.getByRole('dialog', { name: 'Mochila negra Jansport' })
+    expect(within(hojaRoja).getByRole('button', { name: 'Lo encontré' })).toBeInTheDocument()
+    fireEvent.click(within(hojaRoja).getByRole('button', { name: 'Cerrar' }))
+
+    fireEvent.click(screen.getByRole('tab', { name: /En resguardo/ }))
+    expect(screen.getByRole('heading', { name: /Biblioteca \(AF\)/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Calculadora/ }))
+    const hoja = screen.getByRole('dialog', { name: 'Calculadora' })
+    expect(await within(hoja).findByRole('button', { name: 'Es mío' })).toBeInTheDocument()
+  })
+
+  it('en Mis casos se avisa de los strikes y de lo que pasa con el siguiente', async () => {
+    const { misStrikes } = await import('./lib/casos.js')
+    misStrikes.mockResolvedValueOnce(2)
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: /^Mis casos/ }))
+    expect(await screen.findByText(/Tienes 2 strikes este semestre/)).toBeInTheDocument()
+    expect(screen.getByText(/se suspende tu cuenta 7 días/)).toBeInTheDocument()
+  })
+
   it('con la cuenta suspendida se puede ver el mapa pero no publicar', async () => {
     conSesion({ suspendido_hasta: new Date(Date.now() + 86400000).toISOString() })
     render(<App />)
     await screen.findByRole('button', { name: /Calculadora Casio/ })
     expect(screen.queryByRole('button', { name: 'Perdí algo' })).not.toBeInTheDocument()
-    expect(screen.getByText(/cuenta está suspendida/)).toBeInTheDocument()
+    expect(screen.getByText(/cuenta está suspendida hasta el/)).toBeInTheDocument()
   })
 })
 
 describe('App sin conexión con el servidor', () => {
   beforeEach(() => {
+    window.history.replaceState(null, '', '/')
     conSesion()
     localStorage.clear()
   })

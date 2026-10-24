@@ -12,6 +12,8 @@ vi.mock('../lib/casos.js', async (original) => ({
   responderSolicitud: vi.fn(async () => null),
   generarClave: vi.fn(async () => '0427'),
   verificarClave: vi.fn(async () => ({ ok: false, intentosRestantes: 4 })),
+  dejarEnPuntoSeguro: vi.fn(async () => null),
+  renovarPin: vi.fn(async () => null),
   contactoDelCaso: vi.fn(async () => ({
     nombre: 'Ana López',
     correo: 'ana@morelia.tecnm.mx',
@@ -110,5 +112,85 @@ describe('TarjetaCaso: el dueño aceptado', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ver mi clave de entrega' }))
     expect(await screen.findByLabelText('Clave 0 4 2 7')).toBeInTheDocument()
     expect(casos.generarClave).toHaveBeenCalledWith('s1')
+  })
+})
+
+describe('TarjetaCaso: Fase 4', () => {
+  const puntos = [
+    { id: 'p1', nombre: 'Biblioteca (AF)' },
+    { id: 'p2', nombre: 'Servicios Escolares' },
+  ]
+
+  it('un pin verde vencido pide llevarlo a un punto seguro y deja elegir cuál', async () => {
+    const onCambio = vi.fn()
+    const vencido = { ...pin, estado: 'caducado', expira: '2026-01-01T00:00:00Z' }
+    render(
+      <TarjetaCaso
+        caso={{ papel: 'encontre', pin: vencido, solicitudes: [] }}
+        puntos={puntos}
+        onCambio={onCambio}
+      />,
+    )
+    expect(screen.getByText(/llévalo a un punto seguro/)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Punto seguro'), { target: { value: 'p2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lo llevo a este punto seguro' }))
+    await waitFor(() => expect(onCambio).toHaveBeenCalled())
+    expect(casos.dejarEnPuntoSeguro).toHaveBeenCalledWith('v1', 'p2')
+  })
+
+  it('un pin verde activo sin reclamos ofrece llevarlo, sin abrir el formulario', () => {
+    const activo = { ...pin, estado: 'activo', expira: '2099-01-01T00:00:00Z' }
+    render(
+      <TarjetaCaso caso={{ papel: 'encontre', pin: activo, solicitudes: [] }} puntos={puntos} />,
+    )
+    expect(screen.queryByLabelText('Punto seguro')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Dejar en un punto seguro' }))
+    expect(screen.getByLabelText('Punto seguro')).toBeInTheDocument()
+  })
+
+  it('con una solicitud pendiente no se ofrece llevarlo', () => {
+    render(
+      <TarjetaCaso caso={{ papel: 'encontre', pin, solicitudes: [solicitud()] }} puntos={puntos} />,
+    )
+    expect(screen.queryByRole('button', { name: /punto seguro/ })).not.toBeInTheDocument()
+  })
+
+  it('el dueño renueva su pin rojo vencido', async () => {
+    const rojo = {
+      ...pin,
+      id: 'r1',
+      tipo: 'rojo',
+      estado: 'caducado',
+      renovado: false,
+      expira: new Date(Date.now() - 86400000).toISOString(),
+    }
+    const onCambio = vi.fn()
+    render(
+      <TarjetaCaso caso={{ papel: 'perdi', pin: rojo, encontrados: [] }} onCambio={onCambio} />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Renovar 72 horas en el mapa' }))
+    await waitFor(() => expect(onCambio).toHaveBeenCalled())
+    expect(casos.renovarPin).toHaveBeenCalledWith('r1')
+  })
+
+  it('en resguardo, el dueño aceptado ve dónde recogerlo (sin Teams)', async () => {
+    casos.contactoDelCaso.mockResolvedValueOnce({
+      nombre: 'Biblioteca (AF)',
+      correo: null,
+      papel: 'punto_seguro',
+    })
+    render(
+      <TarjetaCaso
+        caso={{
+          papel: 'reclame',
+          pin: { ...pin, estado: 'en_resguardo', tieneFotoNitida: false },
+          solicitud: solicitud({ estado: 'aceptada', solicitanteId: 'yo' }),
+          punto: 'Biblioteca (AF)',
+        }}
+      />,
+    )
+    expect(await screen.findByText('Recógelo en')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Escribir en Teams' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ver mi clave de entrega' })).toBeInTheDocument()
   })
 })

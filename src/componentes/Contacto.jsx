@@ -21,6 +21,17 @@ export default function Contacto({ solicitudId, objeto }) {
   if (error) return <p className="mt-2 text-sm text-pin-rojo">{error}</p>
   if (!contacto) return <p className="mt-2 text-sm text-tinta/60">Cargando contacto…</p>
 
+  // En resguardo no hay correo personal: el dueño va directo al punto seguro
+  if (contacto.papel === 'punto_seguro') {
+    return (
+      <div className="contacto mt-3">
+        <p className="text-sm text-tinta/70">Recógelo en</p>
+        <p className="text-lg leading-tight font-extrabold">{contacto.nombre}</p>
+        <p className="text-sm">Lleva tu clave: el personal la escribe al entregarte el objeto.</p>
+      </div>
+    )
+  }
+
   const quien = contacto.papel === 'encontro' ? 'Lo tiene' : 'Es de'
   return (
     <div className="contacto mt-3">
