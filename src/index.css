@@ -113,6 +113,64 @@ body {
     @apply w-full px-4 pt-1.5 pb-1 text-left text-[15px] hover:bg-[#eef3f6];
   }
 
+  /* ─── Mis casos ─── */
+  .titulo-grupo {
+    @apply mb-1.5 flex items-center gap-2 px-1 text-lg font-extrabold;
+  }
+  .contador {
+    @apply grid h-5 min-w-5 place-items-center rounded-full bg-pin-rojo px-1.5 pt-px text-xs text-white;
+  }
+  /* El borde izquierdo grueso dice de qué tipo es el pin del caso */
+  .caso {
+    @apply rounded-[18px] border-[2.5px] border-l-[9px] border-tinta bg-white px-3.5 pt-3 pb-3.5 shadow-[0_4px_0_#2b3a4a22];
+  }
+  .caso-rojo {
+    @apply border-l-pin-rojo;
+  }
+  .caso-verde {
+    @apply border-l-pin-verde;
+  }
+  .solicitud {
+    @apply rounded-xl bg-[#f4f7f9] px-3 pt-2 pb-2.5;
+  }
+  .boton-chico {
+    @apply rounded-xl border-2 border-tinta bg-white px-2 pt-1.5 pb-1 font-bold shadow-[0_2px_0_#2b3a4a] active:translate-y-px active:shadow-none disabled:opacity-45;
+  }
+  .aviso {
+    @apply flex w-full items-baseline gap-2 rounded-xl bg-white/60 px-3 pt-1.5 pb-1 text-left text-[15px] leading-snug;
+  }
+  .aviso-nuevo {
+    @apply bg-white font-semibold shadow-[inset_4px_0_0_#f2545b];
+  }
+  .contacto {
+    @apply rounded-2xl bg-[#eef3f6] px-3 pt-2.5 pb-3;
+  }
+  .boton-teams {
+    @apply block rounded-xl border-2 border-tinta bg-[#5b5fc7] px-3 pt-2 pb-1.5 text-center font-extrabold text-white shadow-[0_3px_0_#2b3a4a] active:translate-y-px active:shadow-none;
+  }
+  .hecho {
+    @apply rounded-2xl bg-[#e3f6ec] px-3 pt-2.5 pb-3;
+  }
+  .campo input.entrada-clave {
+    @apply w-40 text-center text-2xl font-extrabold tracking-[0.5em];
+  }
+  /* La clave de entrega: cuatro piezas de maqueta, grandes para dictarlas en persona */
+  .clave {
+    @apply mt-1.5 flex gap-2;
+  }
+  .clave span {
+    @apply grid h-16 w-14 place-items-center rounded-2xl border-[2.5px] border-tinta bg-techo pt-1 text-4xl font-extrabold shadow-[0_5px_0_#2b3a4a];
+    animation: pieza-cae 0.32s ease-out backwards;
+  }
+  .clave span:nth-child(2) {
+    animation-delay: 60ms;
+  }
+  .clave span:nth-child(3) {
+    animation-delay: 120ms;
+  }
+  .clave span:nth-child(4) {
+    animation-delay: 180ms;
+  }
   .atribucion {
     @apply mt-1.5 block text-right text-[10px] text-tinta/70;
   }
@@ -124,7 +182,14 @@ body {
   }
 }
 
+@keyframes pieza-cae {
+  from {
+    transform: translateY(-14px);
+    opacity: 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
+  .clave span,
   .hoja {
     animation: none;
   }

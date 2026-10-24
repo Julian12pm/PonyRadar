@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, it, expect, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 
 // ─── Simulaciones: Supabase configurado, una sesión y pines de ejemplo ───
 const estado = vi.hoisted(() => ({ sesion: { cargando: false, sesion: null, perfil: null } }))
@@ -14,7 +14,10 @@ vi.mock('./lib/pines.js', async (original) => {
   const { PINES_DEMO } = await import('./mapa/demo.js')
   return {
     ...(await original()),
-    cargarPines: vi.fn(async () => PINES_DEMO),
+    // Pines de otra persona, activos
+    cargarPines: vi.fn(async () =>
+      PINES_DEMO.map((p) => ({ ...p, estado: 'activo', autorId: 'otro' })),
+    ),
     escucharPines: vi.fn(() => () => {}),
     cargarPuntosSeguros: vi.fn(async () => [
       { id: 's1', nombre: 'Biblioteca (AF)', zonaId: 'edificio-AF', cantidad: 3 },
@@ -22,6 +25,26 @@ vi.mock('./lib/pines.js', async (original) => {
     crearPin: vi.fn(async () => 'nuevo'),
   }
 })
+
+vi.mock('./lib/casos.js', async (original) => ({
+  ...(await original()),
+  cargarAvisos: vi.fn(async () => [
+    {
+      id: 'a1',
+      tipo: 'solicitud_aceptada',
+      pinId: 'demo-03',
+      leido: false,
+      creado: new Date().toISOString(),
+      titulo: 'Termo azul',
+    },
+  ]),
+  escucharAvisos: vi.fn(() => () => {}),
+  marcarAvisosLeidos: vi.fn(async () => {}),
+  miSolicitudAlPin: vi.fn(async () => null),
+  solicitarPin: vi.fn(async () => 'sol-1'),
+  loEncontre: vi.fn(async () => 'verde-1'),
+  cargarCasos: vi.fn(async () => []),
+}))
 
 const { default: App } = await import('./App.jsx')
 
@@ -103,6 +126,54 @@ describe('App', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  it('"Es mío" en un pin verde ajeno envía la solicitud', async () => {
+    const { solicitarPin } = await import('./lib/casos.js')
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: /Termo azul/ }))
+    const hoja = screen.getByRole('dialog', { name: 'Termo azul' })
+    fireEvent.click(await within(hoja).findByRole('button', { name: 'Es mío' }))
+    fireEvent.change(within(hoja).getByLabelText(/solo el dueño sabría/), {
+      target: { value: 'Tiene una calcomanía de Pumas' },
+    })
+    fireEvent.click(within(hoja).getByRole('button', { name: 'Enviar solicitud' }))
+    expect(await within(hoja).findByText(/Solicitud enviada/)).toBeInTheDocument()
+    expect(solicitarPin).toHaveBeenCalledWith('demo-03', 'Tiene una calcomanía de Pumas')
+  })
+
+  it('"Lo encontré" en un pin rojo ajeno pide el dato ciego', async () => {
+    const { loEncontre } = await import('./lib/casos.js')
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: /Calculadora Casio/ }))
+    const hoja = screen.getByRole('dialog', { name: 'Calculadora Casio gris' })
+    fireEvent.click(within(hoja).getByRole('button', { name: 'Lo encontré' }))
+    const avisar = within(hoja).getByRole('button', { name: 'Avisar al dueño' })
+    expect(avisar).toBeDisabled()
+    fireEvent.change(within(hoja).getByLabelText(/Dato ciego/), {
+      target: { value: 'Tiene un nombre grabado' },
+    })
+    fireEvent.click(avisar)
+    expect(await within(hoja).findByText(/avisamos al dueño/)).toBeInTheDocument()
+    expect(loEncontre).toHaveBeenCalledWith('demo-01', {
+      descripcion: '',
+      datoCiego: 'Tiene un nombre grabado',
+    })
+  })
+
+  it('el botón "Mis casos" muestra los avisos nuevos y abre la pantalla de casos', async () => {
+    render(<App />)
+    expect(await screen.findByLabelText('1 avisos nuevos')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Mis casos/ }))
+    expect(await screen.findByRole('heading', { name: 'Mis casos' })).toBeInTheDocument()
+    expect(screen.getByText(/Aceptaron tu solicitud de "Termo azul"/)).toBeInTheDocument()
+    expect(await screen.findByText('Todavía no tienes casos.')).toBeInTheDocument()
+    // Al verlos, los avisos quedan como leídos y el contador se apaga
+    const { marcarAvisosLeidos } = await import('./lib/casos.js')
+    expect(marcarAvisosLeidos).toHaveBeenCalledWith(['a1'])
+    // Regresa al mapa
+    fireEvent.click(screen.getByRole('button', { name: 'Mapa' }))
+    expect(await screen.findByRole('button', { name: /Calculadora Casio/ })).toBeInTheDocument()
+  })
+
   it('con la cuenta suspendida se puede ver el mapa pero no publicar', async () => {
     conSesion({ suspendido_hasta: new Date(Date.now() + 86400000).toISOString() })
     render(<App />)
@@ -141,7 +212,9 @@ describe('App sin conexión con el servidor', () => {
       expect(screen.queryByText(/cuenta está suspendida/)).not.toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Reintentar ahora' })).toBeInTheDocument()
     } finally {
-      cargarPines.mockImplementation(async () => PINES_DEMO)
+      cargarPines.mockImplementation(async () =>
+        PINES_DEMO.map((p) => ({ ...p, estado: 'activo', autorId: 'otro' })),
+      )
     }
   })
 })
