@@ -41,7 +41,7 @@ body {
     @apply relative shrink-0 rounded-full border-2 border-tinta bg-white px-2.5 pt-0.5 text-[12.5px] font-bold whitespace-nowrap shadow-[0_2px_0_#2b3a4a] active:translate-y-px active:shadow-none;
   }
   .salto-contador {
-    @apply absolute -top-2 -right-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-pin-rojo px-1 pt-px text-[11px] leading-none text-white ring-2 ring-white;
+    @apply absolute -top-2.5 -right-3 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-pin-rojo px-1 pt-px text-[11px] leading-none text-white ring-2 ring-white;
   }
   .chip-activo {
     @apply bg-tinta text-white;
@@ -58,7 +58,59 @@ body {
   .boton-verde {
     @apply bg-pin-verde;
   }
+  .boton:disabled {
+    @apply cursor-not-allowed opacity-45;
+  }
+  /* Botón en modo "colocar pin": se ve hundido y dice "Cancelar" */
+  .boton-activo {
+    @apply translate-y-0.5 bg-white text-tinta shadow-[0_2px_0_#2b3a4a];
+  }
+
+  /* Hoja que sube desde abajo */
+  .hoja {
+    @apply absolute inset-x-0 bottom-0 z-20 mx-auto max-h-[75%] max-w-md overflow-y-auto rounded-t-[22px] border-[2.5px] border-b-0 border-tinta bg-white px-4 pt-3.5 pb-5 shadow-[0_-6px_0_#2b3a4a14];
+    animation: hoja-sube 0.22s ease-out;
+  }
+  .hoja-cerrar {
+    @apply grid size-9 shrink-0 place-items-center rounded-full bg-[#eef3f6];
+  }
+  .campo {
+    @apply grid gap-1 text-left text-sm font-semibold;
+  }
+  .campo input,
+  .campo select,
+  .campo textarea {
+    @apply rounded-xl border-2 border-tinta/25 bg-white px-3 pt-2 pb-1.5 text-base font-normal focus:border-tinta focus:outline-none;
+  }
+  .etiqueta-tipo {
+    @apply rounded-full px-2.5 pt-0.5 text-sm font-bold text-white;
+  }
+  .fila-pin {
+    @apply flex w-full items-center gap-2.5 rounded-xl bg-[#eef3f6] px-3 pt-2 pb-1.5 text-left font-semibold;
+  }
+  .punto-tipo {
+    @apply size-3 shrink-0 rounded-full ring-2 ring-tinta;
+  }
+  .menu-categorias {
+    @apply absolute top-full right-0 z-30 mt-1.5 w-60 overflow-hidden rounded-2xl border-2 border-tinta bg-white py-1 shadow-[0_4px_0_#2b3a4a];
+  }
+  .menu-categorias button {
+    @apply w-full px-4 pt-1.5 pb-1 text-left text-[15px] hover:bg-[#eef3f6];
+  }
+
   .atribucion {
     @apply mt-1.5 block text-right text-[10px] text-tinta/70;
+  }
+}
+
+@keyframes hoja-sube {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hoja {
+    animation: none;
   }
 }
