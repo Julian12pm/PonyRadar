@@ -93,8 +93,9 @@ function Marcador({ punto, ancla = 'abajo', children, etiqueta, onClick, clase =
 }
 
 /**
- * Ocupa todo su contenedor. Primero mide el espacio disponible y luego monta el mapa;
- * si cambia el tamaño (por ejemplo, al girar el celular) se vuelve a encuadrar.
+ * Ocupa todo su contenedor. Primero mide el espacio disponible y luego monta el mapa.
+ * Si después cambia el tamaño (en el celular pasa al ocultarse la barra de direcciones o al
+ * abrirse el teclado), el mapa NO se reinicia: conserva el zoom y el punto que estaba al centro.
  *
  * Props:
  * - pines: [{ id, tipo: 'rojo'|'verde', punto: [x, y] (metros), … }] (ya filtrados)
@@ -123,9 +124,7 @@ export default function MapaCampus({ ref, ...props }) {
   const listo = tamano && tamano.ancho > 0 && tamano.alto > 0
   return (
     <div ref={marco} className="absolute inset-0">
-      {listo && (
-        <Lienzo key={`${tamano.ancho}x${tamano.alto}`} api={ref} tamano={tamano} {...props} />
-      )}
+      {listo && <Lienzo api={ref} tamano={tamano} {...props} />}
     </div>
   )
 }
@@ -177,6 +176,21 @@ function Lienzo({
   }
 
   const irA = (o) => control.current?.setTransform(o.x, o.y, o.escala, 450, 'easeOut')
+
+  // Si cambia el tamaño del mapa, se mantiene el mismo zoom y el mismo punto al centro
+  const tamanoPrevio = useRef(tamano)
+  useEffect(() => {
+    const previo = tamanoPrevio.current
+    tamanoPrevio.current = tamano
+    const estado = control.current?.instance.state
+    if (!estado || (previo.ancho === tamano.ancho && previo.alto === tamano.alto)) return
+    control.current.setTransform(
+      estado.positionX + (tamano.ancho - previo.ancho) / 2,
+      estado.positionY + (tamano.alto - previo.alto) / 2,
+      estado.scale,
+      0,
+    )
+  }, [tamano])
 
   // Salto animado a una unidad o a todo el campus
   useImperativeHandle(api, () => ({ saltar: (id) => irA(objetivoDe(id, tamano)) }), [tamano])
@@ -260,6 +274,8 @@ function Lienzo({
       limitToBounds
       centerZoomedOut
       doubleClick={{ disabled: true }}
+      // Tocar un pin, una burbuja o un punto seguro nunca arrastra el mapa
+      panning={{ excluded: ['marcador-boton'] }}
       onTransform={(_, estado) => alMover(estado)}
     >
       <TransformComponent wrapperClass="mapa-envoltura" contentClass="mapa-contenido">

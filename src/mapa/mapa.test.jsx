@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, it, expect, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import TarjetaPin from '../componentes/TarjetaPin.jsx'
 import { CapaBase, CapaEtiquetas } from './CroquisCampus.jsx'
 import MapaCampus from './MapaCampus.jsx'
@@ -35,6 +35,7 @@ describe('TarjetaPin', () => {
 })
 
 describe('MapaCampus', () => {
+  let altoSimulado = 600
   // jsdom no mide elementos: se simula una pantalla de celular para que el mapa se monte
   const original = {}
   beforeAll(() => {
@@ -42,7 +43,7 @@ describe('MapaCampus', () => {
       original[prop] = Object.getOwnPropertyDescriptor(Element.prototype, prop)
       Object.defineProperty(Element.prototype, prop, {
         configurable: true,
-        get: () => (prop === 'clientWidth' ? 390 : 600),
+        get: () => (prop === 'clientWidth' ? 390 : altoSimulado),
       })
     }
   })
@@ -78,5 +79,46 @@ describe('MapaCampus', () => {
     const ref = { current: null }
     render(<MapaCampus ref={ref} pines={[]} />)
     expect(() => ref.current.saltar('unidad-metal-mecanica')).not.toThrow()
+  })
+
+  it('tocar un pin no mueve el mapa, aunque cambie el alto de la pantalla', () => {
+    // En el celular, al tocar puede ocultarse la barra de direcciones y cambiar el alto del mapa.
+    // Se simula ResizeObserver para poder avisar ese cambio (la librería de zoom también lo usa,
+    // así que se guardan todos los avisos).
+    const avisos = []
+    const avisarCambio = () => avisos.forEach((aviso) => aviso([]))
+    const ResizeObserverOriginal = globalThis.ResizeObserver
+    globalThis.ResizeObserver = class {
+      constructor(callback) {
+        avisos.push(callback)
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    try {
+      const onTocarPin = vi.fn()
+      render(<MapaCampus pines={PINES_DEMO} onTocarPin={onTocarPin} />)
+      const croquis = document.querySelector('.croquis')
+      const zoom = () => croquis.style.getPropertyValue('--k')
+      const posicion = () => document.querySelector('.mapa-contenido').style.transform
+      const zoomAntes = zoom()
+      const posicionAntes = posicion()
+
+      fireEvent.click(screen.getByRole('button', { name: /Calculadora Casio/ }))
+      expect(onTocarPin).toHaveBeenCalled()
+      expect(posicion()).toBe(posicionAntes)
+
+      // Cambia el alto: el mapa no se vuelve a montar ni cambia el zoom
+      altoSimulado = 660
+      act(() => avisarCambio())
+      expect(document.querySelector('.croquis')).toBe(croquis)
+      expect(zoom()).toBe(zoomAntes)
+      const escala = Number(posicion().match(/scale\(([\d.]+)\)/)[1])
+      expect(escala).toBeCloseTo(Number(zoomAntes), 3)
+    } finally {
+      globalThis.ResizeObserver = ResizeObserverOriginal
+      altoSimulado = 600
+    }
   })
 })
