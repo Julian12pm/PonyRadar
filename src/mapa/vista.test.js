@@ -1,5 +1,49 @@
 import { describe, it, expect } from 'vitest'
-import { encuadrar, nivelDetalle } from './vista.js'
+import { areaVisible, encuadrar, nivelDetalle, nivelLetras, rellenar } from './vista.js'
+
+describe('rellenar', () => {
+  const contenido = { ancho: 600, alto: 600 }
+  const pantalla = { ancho: 400, alto: 800 }
+
+  it('acerca lo suficiente para que el contenido cubra toda la pantalla', () => {
+    // El foco cabe a escala 2, pero para cubrir 800 px de alto con 600 px hace falta 800/600
+    const v = rellenar({ x0: 200, y0: 200, x1: 400, y1: 400 }, contenido, pantalla)
+    expect(v.escala).toBe(2)
+    const sinHuecos = rellenar({ x0: 0, y0: 0, x1: 600, y1: 300 }, contenido, pantalla)
+    expect(sinHuecos.escala).toBeCloseTo(800 / 600)
+  })
+
+  it('centra el foco y nunca deja ver fuera del contenido', () => {
+    const v = rellenar({ x0: 200, y0: 200, x1: 400, y1: 400 }, contenido, pantalla)
+    // Centro del foco (300, 300) a escala 2 queda en el centro de la pantalla
+    expect(v.x).toBe(200 - 600)
+    expect(v.y).toBe(400 - 600)
+    // Un foco en la esquina se corrige para no mostrar el vacío
+    const esquina = rellenar({ x0: 0, y0: 0, x1: 100, y1: 100 }, contenido, pantalla)
+    expect(esquina.x).toBe(0)
+    expect(esquina.y).toBe(0)
+  })
+})
+
+describe('areaVisible', () => {
+  it('calcula qué parte del contenido se ve', () => {
+    expect(areaVisible({ escala: 2, x: -100, y: -50 }, { ancho: 400, alto: 300 })).toEqual({
+      x0: 50,
+      y0: 25,
+      x1: 250,
+      y1: 175,
+    })
+  })
+})
+
+describe('nivelLetras', () => {
+  it('muestra más letras al acercar', () => {
+    expect(nivelLetras(0.7)).toBe(1)
+    expect(nivelLetras(1)).toBe(2)
+    // Escritorio con el campus completo (≈1.15 px/m): todas las letras
+    expect(nivelLetras(1.15)).toBe(3)
+  })
+})
 
 describe('encuadrar', () => {
   const pantalla = { ancho: 400, alto: 800 }

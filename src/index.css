@@ -31,7 +31,17 @@ body {
     scrollbar-width: none;
   }
   .chip {
-    @apply shrink-0 rounded-full bg-[#eef3f6] px-3 pt-0.5 text-[14px] font-bold whitespace-nowrap;
+    @apply shrink-0 rounded-full bg-[#eef3f6] px-2.5 pt-0.5 text-[13px] font-bold whitespace-nowrap;
+  }
+  /* Botones para saltar a cada unidad (en el pie, arriba de los botones grandes) */
+  .saltos {
+    @apply flex justify-center gap-1.5;
+  }
+  .salto {
+    @apply relative shrink-0 rounded-full border-2 border-tinta bg-white px-2.5 pt-0.5 text-[12.5px] font-bold whitespace-nowrap shadow-[0_2px_0_#2b3a4a] active:translate-y-px active:shadow-none;
+  }
+  .salto-contador {
+    @apply absolute -top-2 -right-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-pin-rojo px-1 pt-px text-[11px] leading-none text-white ring-2 ring-white;
   }
   .chip-activo {
     @apply bg-tinta text-white;

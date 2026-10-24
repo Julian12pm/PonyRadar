@@ -1,11 +1,16 @@
 // Pantalla principal: barra superior, mapa del campus en medio y botones abajo.
 // El mapa queda entre las dos barras para que nada lo tape ni corte edificios en la orilla.
+import { useRef, useState } from 'react'
+import Saltos from './componentes/Saltos.jsx'
 import MapaCampus from './mapa/MapaCampus.jsx'
 import { GRUPOS_DEMO, PINES_DEMO, SEGUROS_DEMO } from './mapa/demo.js'
 
 const FILTROS = ['Todo', 'Perdidos', 'Encontrados', 'Categoría']
 
 export default function App() {
+  const mapa = useRef(null)
+  const [fueraDeVista, setFueraDeVista] = useState({})
+
   return (
     <main className="flex h-full flex-col bg-fondo">
       <header className="shrink-0 px-3 pt-3 pb-1">
@@ -22,13 +27,19 @@ export default function App() {
       </header>
 
       <section className="relative min-h-0 flex-1" aria-label="Mapa del campus">
-        <MapaCampus pines={PINES_DEMO} grupos={GRUPOS_DEMO} seguros={SEGUROS_DEMO} />
+        <MapaCampus
+          ref={mapa}
+          pines={PINES_DEMO}
+          grupos={GRUPOS_DEMO}
+          seguros={SEGUROS_DEMO}
+          onFueraDeVista={setFueraDeVista}
+        />
       </section>
 
-      <footer className="shrink-0 px-3 pt-1 pb-3">
+      <footer className="shrink-0 px-3 pt-2 pb-3">
         <div className="mx-auto max-w-md text-center">
-          <p className="pista-uso">Toca el mapa justo donde pasó</p>
-          <div className="grid grid-cols-2 gap-2.5">
+          <Saltos contadores={fueraDeVista} onSaltar={(id) => mapa.current?.saltar(id)} />
+          <div className="mt-2.5 grid grid-cols-2 gap-2.5">
             <button className="boton boton-rojo">Perdí algo</button>
             <button className="boton boton-verde">Encontré algo</button>
           </div>
