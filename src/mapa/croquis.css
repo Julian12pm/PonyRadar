@@ -1,0 +1,357 @@
+/* Estilos del croquis del campus (estilo "maqueta").
+   --k = píxeles de pantalla por metro; lo actualiza MapaCampus.jsx al hacer zoom.
+   Para que un texto mida siempre lo mismo en pantalla se divide entre --k. */
+
+.croquis {
+  --k: 1;
+  position: relative;
+}
+
+.capa-croquis {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.capa-etiquetas {
+  pointer-events: none;
+}
+
+/* ─── Nivel de detalle: d2 aparece al acercar un poco, d3 al acercar mucho ─── */
+.croquis[data-detalle='1'] .d2,
+.croquis[data-detalle='1'] .d3,
+.croquis[data-detalle='2'] .d3,
+.croquis:not([data-detalle='1']) .solo-d1,
+.croquis[data-detalle='1'] .etiqueta-edificio.n2,
+.croquis[data-detalle='1'] .etiqueta-edificio.n3,
+.croquis[data-detalle='2'] .etiqueta-edificio.n3 {
+  display: none;
+}
+
+/* ─── Suelo ─── */
+.fondo {
+  fill: #dfe4d3;
+}
+.vecino {
+  fill: #cfcabd;
+}
+.velo {
+  fill: #eef0e6;
+  opacity: 0.55;
+}
+.terreno {
+  fill: #c5e0a2;
+}
+.pasto {
+  fill: #a9d585;
+}
+.bosque {
+  fill: #93c873;
+}
+
+/* ─── Calles ─── */
+.calle-borde,
+.calle,
+.calle-raya,
+.interna-borde,
+.interna,
+.andador-borde,
+.andador,
+.escalera {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.calle-borde.avenida {
+  stroke: #aaa596;
+  stroke-width: 15;
+}
+.calle.avenida {
+  stroke: #e9e5da;
+  stroke-width: 13;
+}
+.calle-borde.calle {
+  stroke: #b8b3a5;
+  stroke-width: 9;
+}
+.calle.calle {
+  stroke: #efebe1;
+  stroke-width: 7.5;
+}
+.calle-raya {
+  stroke: #fffdf6;
+  stroke-width: 0.5;
+  stroke-dasharray: 4 4;
+}
+.interna-borde {
+  stroke: #bdb7a6;
+  stroke-width: 6.5;
+}
+.interna {
+  stroke: #dcd7ca;
+  stroke-width: 5.2;
+}
+.andador-borde {
+  stroke: #d2c39e;
+  stroke-width: 3.6;
+}
+.andador {
+  stroke: #f7efda;
+  stroke-width: 2.6;
+}
+.escalera {
+  stroke: #e2d4b0;
+  stroke-width: 2.8;
+  stroke-linecap: butt;
+}
+
+/* ─── Estacionamientos ─── */
+.estacionamiento {
+  fill: #b9bcb4;
+}
+.cajon {
+  stroke: #f4f2ea;
+  stroke-width: 0.25;
+}
+
+/* ─── Deportes ─── */
+.campo {
+  fill: #79bb55;
+}
+.franjas rect {
+  fill: #86c562;
+}
+.cancha-basquet {
+  fill: #d9845a;
+}
+.cancha-voleibol {
+  fill: #5f9fcf;
+}
+.cancha-futbol {
+  fill: #79bb55;
+}
+.lineas-cancha * {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 0.25;
+}
+.lineas-cancha .red {
+  stroke: #2b3a4a;
+  stroke-width: 0.45;
+}
+.pista {
+  fill: #d0683d;
+}
+.pista-interior {
+  fill: #79bb55;
+}
+.pista-carril path {
+  fill: none;
+  stroke: #f6d6c4;
+  stroke-width: 0.22;
+}
+.alberca-borde {
+  fill: #eef3ef;
+  stroke: #c9d3cc;
+  stroke-width: 0.3;
+}
+.alberca-agua {
+  fill: #58c2e3;
+}
+.alberca-fondo {
+  stroke: #2f8fb7;
+  stroke-width: 0.35;
+}
+.alberca-carril {
+  stroke: #ffffff;
+  stroke-width: 0.25;
+  stroke-dasharray: 0.6 0.6;
+}
+
+/* ─── Árboles ─── */
+.arbol-sombra {
+  fill: #4f7a3a;
+  opacity: 0.3;
+}
+.arbol {
+  fill: #57a248;
+}
+.arbol-luz {
+  fill: #79c262;
+}
+
+/* ─── Edificios ─── */
+.sombra {
+  fill: #3f5f2f;
+  opacity: 0.28;
+}
+.muro-frente {
+  fill: #c45a28;
+  stroke: #c45a28;
+  stroke-width: 0.15;
+}
+.muro-lado {
+  fill: #a8481d;
+  stroke: #a8481d;
+  stroke-width: 0.15;
+}
+.techo {
+  fill: #f6a650;
+  stroke: #b9541f;
+  stroke-width: 0.35;
+  stroke-linejoin: round;
+}
+.techo-plaza {
+  fill: #ffcf5c;
+}
+.techado {
+  fill: #e8dcc2;
+  stroke: #bcae8f;
+  stroke-width: 0.3;
+}
+.techado-muro {
+  fill: #c8b995;
+}
+
+/* ─── Etiquetas (tamaño fijo en pantalla) ─── */
+.croquis[data-detalle='3'] .etiqueta-edificio {
+  font-size: calc(17px / var(--k));
+}
+.capa-etiquetas text {
+  font-family: 'Baloo 2 Variable', system-ui, sans-serif;
+  paint-order: stroke;
+  stroke-linejoin: round;
+}
+.etiqueta-edificio {
+  font-size: calc(14px / var(--k));
+  font-weight: 800;
+  fill: #5a2209;
+  stroke: #fff1dc;
+  stroke-width: calc(3px / var(--k));
+  text-anchor: middle;
+}
+.etiqueta-unidad {
+  font-size: calc(15px / var(--k));
+  font-weight: 800;
+  fill: #2f4a2a;
+  stroke: #f2f6ea;
+  stroke-width: calc(4px / var(--k));
+  text-anchor: middle;
+}
+.etiqueta-calle {
+  font-size: calc(11px / var(--k));
+  font-weight: 600;
+  fill: #6d685b;
+  stroke: #e9e5da;
+  stroke-width: calc(3px / var(--k));
+  letter-spacing: 0.04em;
+}
+.etiqueta-secundaria {
+  font-size: calc(11px / var(--k));
+  font-weight: 700;
+  fill: #36522e;
+  stroke: #f2f6ea;
+  stroke-width: calc(3px / var(--k));
+  text-anchor: middle;
+}
+
+/* Accesos e íconos de lugares: se dibujan a escala 1/--k, así que sus medidas ya son píxeles */
+.acceso-marca {
+  fill: #ffd23f;
+  stroke: #2b3a4a;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.acceso-nombre,
+.lugar-nombre {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #2b3a4a;
+  stroke: #ffffff;
+  stroke-width: 3px;
+}
+.lugar-fondo {
+  fill: #ffffff;
+  stroke: #2b3a4a;
+  stroke-width: 2;
+}
+.lugar-icono {
+  fill: none;
+  stroke: #2b3a4a;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lugar-biblioteca .lugar-fondo {
+  fill: #2f6fb3;
+}
+.lugar-biblioteca .lugar-icono {
+  stroke: #ffffff;
+}
+.lugar-comida .lugar-fondo,
+.lugar-cafeteria .lugar-fondo,
+.lugar-comedor .lugar-fondo {
+  fill: #ffe7a8;
+}
+
+/* ─── Pines y marcadores ───
+   Cada marcador se ancla en su punto (left/top) y se escala 1/--k para medir siempre lo mismo. */
+.mapa-envoltura {
+  width: 100% !important;
+  height: 100% !important;
+}
+.capa-pines {
+  position: absolute;
+  inset: 0;
+}
+.marcador {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform: scale(calc(1 / var(--k)));
+  transform-origin: 0 0;
+}
+.marcador > * {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.marcador-abajo > * {
+  transform: translate(-50%, -95%);
+}
+.marcador-centro > * {
+  transform: translate(-50%, -50%);
+}
+.marcador svg {
+  display: block;
+  filter: drop-shadow(1px 2px 1px #0002);
+}
+.grupo {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid #2b3a4a;
+  box-shadow: 0 3px 0 #2b3a4a;
+  color: #2b3a4a;
+  font-weight: 800;
+  font-size: 17px;
+}
+.seguro {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px 0 6px;
+  border-radius: 999px;
+  background: #2f6fb3;
+  border: 2.5px solid #2b3a4a;
+  box-shadow: 0 3px 0 #2b3a4a;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 15px;
+  white-space: nowrap;
+}
