@@ -2,8 +2,6 @@
 
 PWA de objetos perdidos y encontrados del **Instituto Tecnológico de Morelia**. La comunidad marca sobre un croquis del campus lo que perdió (pin rojo) o encontró (pin verde), y un sistema de reporte ciego, clave de liberación y strikes asegura que solo el dueño real recupere su objeto.
 
-La especificación completa (fuente de verdad) está en [`docs/IDEA.md`](docs/IDEA.md).
-
 ## Tecnologías
 
 React + Vite + Tailwind CSS v4 (JavaScript) · Supabase (Postgres, Auth, Storage, Realtime) · Vitest · GitHub Actions · Vercel. Todo en planes gratuitos.
@@ -41,7 +39,7 @@ npm run dev                  # abre http://localhost:5173
 
 ## Datos del mapa
 
-El croquis se dibuja con la geometría real de **OpenStreetMap** (© OpenStreetMap contributors, licencia [ODbL](https://www.openstreetmap.org/copyright); el crédito aparece en la app). El plano oficial (`referencia/ITM_Plano_General.pdf`, página 1) solo se usa para nombres de edificios, estacionamientos y accesos.
+El croquis se dibuja con la geometría real de **OpenStreetMap** (© OpenStreetMap contributors, licencia [ODbL](https://www.openstreetmap.org/copyright); el crédito aparece en la app). Los nombres de edificios, estacionamientos y accesos salen del plano oficial del ITM (Campus N° 1).
 
 Para actualizarlo: `npm run osm:descargar` y luego `npm run osm:convertir`. Los nombres que OSM no trae (leyenda del plano, números de estacionamiento, accesos) están en `src/mapa/leyenda.js` y al inicio de `scripts/osm/convertir.mjs`.
 
@@ -56,9 +54,7 @@ Después de `npm run coverage`, abre `coverage/index.html` para ver el reporte d
 ```
 .
 ├── .github/workflows/ci.yml   # CI: lint, formato, pruebas y build
-├── docs/IDEA.md               # Especificación de la beta
 ├── public/                    # Archivos estáticos (íconos)
-├── referencia/                # Plano oficial (PDF) y prototipo viejo (no se compilan)
 ├── scripts/osm/               # Descarga y conversión de los datos de OpenStreetMap
 ├── src/
 │   ├── componentes/           # Piezas de interfaz (filtros, hojas, botones de salto…)
