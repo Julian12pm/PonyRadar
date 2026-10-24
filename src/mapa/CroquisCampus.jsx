@@ -9,7 +9,15 @@
 // los elementos con clase d2 o d3 solo aparecen al acercar (ver croquis.css).
 
 import campus from './campus-osm.json'
-import { aPuntosSvg, aRuta, caja, muros, puntoEtiqueta, rectanguloOrientado } from './geometria.js'
+import {
+  aPuntosSvg,
+  aRuta,
+  area,
+  caja,
+  muros,
+  puntoEtiqueta,
+  rectanguloOrientado,
+} from './geometria.js'
 
 const LIMITES = campus.limites
 const VIEWBOX = `${LIMITES.x} ${LIMITES.y} ${LIMITES.ancho} ${LIMITES.alto}`
@@ -32,12 +40,20 @@ const EDIFICIOS = campus.edificios
   })
   .sort((a, b) => a.sur - b.sur)
 
-// Zona cercana al campus: lo que queda fuera se cubre con un velo claro para que no distraiga
-const CERCA = (() => {
-  const { x0, y0, x1, y1 } = caja(campus.unidades.flatMap((u) => u.puntos))
-  return { x0: x0 - 30, y0: y0 - 30, x1: x1 + 30, y1: y1 + 30 }
-})()
-const estaCerca = ([x, y]) => x > CERCA.x0 && x < CERCA.x1 && y > CERCA.y0 && y < CERCA.y1
+// Un estacionamiento puede venir en varios polígonos (el 2): se rotula solo el más grande
+const ESTACIONAMIENTOS_ROTULADOS = Object.values(
+  campus.estacionamientos.reduce((porId, e) => {
+    if (!porId[e.id] || area(e.puntos) > area(porId[e.id].puntos)) porId[e.id] = e
+    return porId
+  }, {}),
+)
+
+// Todo lo que se dibuja con volumen, de norte a sur. Las construcciones sin letra (por ejemplo AI)
+// se dibujan igual que un edificio, pero no llevan etiqueta ni cuentan como zona.
+const VOLUMENES = [
+  ...EDIFICIOS,
+  ...campus.construcciones.map((c) => ({ ...c, alto: altoDe(c.niveles), sur: caja(c.puntos).y1 })),
+].sort((a, b) => a.sur - b.sur)
 
 const largoDe = (puntos) =>
   puntos.reduce(
@@ -45,38 +61,23 @@ const largoDe = (puntos) =>
     0,
   )
 
-/** Tramo continuo más largo de una línea que queda cerca del campus. */
-function tramoCercano(puntos) {
-  let mejor = []
-  let actual = []
-  for (const p of puntos) {
-    if (estaCerca(p)) actual.push(p)
-    else actual = []
-    if (largoDe(actual) > largoDe(mejor)) mejor = [...actual]
-  }
-  return mejor
-}
-
-// Para cada calle con nombre se usa su tramo más largo junto al campus, de izquierda a derecha
+// El nombre de cada calle va sobre su tramo más largo, escrito de izquierda a derecha
 const CALLES_CON_NOMBRE = Object.values(
-  campus.calles
-    .filter((c) => c.nombre)
-    .reduce((porNombre, c) => {
-      const tramo = tramoCercano(c.puntos)
-      const largo = largoDe(tramo)
-      if (largo > 60 && (!porNombre[c.nombre] || largo > porNombre[c.nombre].largo)) {
-        const puntos = tramo[0][0] > tramo.at(-1)[0] ? [...tramo].reverse() : tramo
-        porNombre[c.nombre] = { nombre: c.nombre, puntos, largo }
-      }
-      return porNombre
-    }, {}),
+  campus.calles.reduce((porNombre, c) => {
+    const largo = largoDe(c.puntos)
+    if (!porNombre[c.nombre] || largo > porNombre[c.nombre].largo) {
+      const puntos = c.puntos[0][0] > c.puntos.at(-1)[0] ? [...c.puntos].reverse() : c.puntos
+      porNombre[c.nombre] = { nombre: c.nombre, puntos, largo }
+    }
+    return porNombre
+  }, {}),
 )
 
 // Nombres de las unidades: posición elegida a mano (en metros) en un espacio libre
 const NOMBRES_UNIDADES = [
-  { texto: 'Unidad Metal Mecánica', x: -140, y: -318 },
+  { texto: 'Unidad Metal Mecánica', x: -138, y: -305 },
   { texto: 'Unidad Central', x: 125, y: -262 },
-  { texto: 'Unidad Posgrado', x: 205, y: 260 },
+  { texto: 'Unidad Posgrado', x: 200, y: 250 },
 ]
 
 // ─── Piezas de dibujo ───
@@ -289,35 +290,10 @@ export function CapaBase() {
         height={LIMITES.alto}
       />
 
-      {/* Alrededores */}
-      {campus.vecinos.map((p, i) => (
-        <polygon key={i} className="vecino" points={aPuntosSvg(p)} />
+      {/* Calles perimetrales: líneas simples sobre el fondo liso */}
+      {campus.calles.map((c, i) => (
+        <path key={i} className={`calle ${c.clase}`} d={aRuta(c.puntos)} />
       ))}
-
-      {/* Calles: primero todos los bordes y luego el relleno, para que los cruces se unan */}
-      <g className="calles">
-        {campus.calles.map((c, i) => (
-          <path key={i} className={`calle-borde ${c.clase}`} d={aRuta(c.puntos)} />
-        ))}
-        {campus.calles.map((c, i) => (
-          <path key={i} className={`calle ${c.clase}`} d={aRuta(c.puntos)} />
-        ))}
-        {campus.calles
-          .filter((c) => c.clase === 'avenida')
-          .map((c, i) => (
-            <path key={i} className="calle-raya d2" d={aRuta(c.puntos)} />
-          ))}
-      </g>
-
-      {/* Velo claro sobre los alrededores (las unidades quedan como huecos) */}
-      <path
-        className="velo"
-        fillRule="evenodd"
-        d={
-          `M${LIMITES.x} ${LIMITES.y}h${LIMITES.ancho}v${LIMITES.alto}h${-LIMITES.ancho}Z` +
-          campus.unidades.map((u) => aRuta(u.puntos, true)).join('')
-        }
-      />
 
       {/* Terreno de las 3 unidades */}
       {campus.unidades.map((u) => (
@@ -393,8 +369,8 @@ export function CapaBase() {
       {campus.techados.map((p, i) => (
         <Techado key={i} puntos={p} />
       ))}
-      {EDIFICIOS.map((e) => (
-        <Edificio key={e.id} e={e} />
+      {VOLUMENES.map((e, i) => (
+        <Edificio key={i} e={e} />
       ))}
     </svg>
   )
@@ -402,6 +378,7 @@ export function CapaBase() {
 
 // Íconos de lugares (trazos de 24 × 24)
 const ICONOS = {
+  escolares: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5',
   comida: 'M7 3v8M4.5 3v4.5a2.5 2.5 0 0 0 5 0V3M7 11v10M17 3c-2.2 1.2-3 3.8-3 7.5h3M17 3v18',
   biblioteca: 'M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3zM21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z',
   cafeteria:
@@ -458,16 +435,14 @@ export function CapaEtiquetas() {
       ))}
 
       {/* Nombres secundarios (al acercar) */}
-      {campus.estacionamientos
-        .filter((e) => !e.id.startsWith('estacionamiento-osm'))
-        .map((e, i) => {
-          const [x, y] = puntoEtiqueta(e.puntos)
-          return (
-            <text key={i} className="etiqueta-secundaria d2" x={x} y={y}>
-              {e.nombre}
-            </text>
-          )
-        })}
+      {ESTACIONAMIENTOS_ROTULADOS.map((e) => {
+        const [x, y] = puntoEtiqueta(e.puntos)
+        return (
+          <text key={e.id} className="etiqueta-secundaria d2" x={x} y={y}>
+            {e.nombre}
+          </text>
+        )
+      })}
       {[campus.alberca, ...campus.campos, { ...campus.pista, puntos: campus.pista.interior }].map(
         (z) => {
           const [x, y] = puntoEtiqueta(z.puntos)

@@ -32,14 +32,7 @@
 
 /* ─── Suelo ─── */
 .fondo {
-  fill: #dfe4d3;
-}
-.vecino {
-  fill: #cfcabd;
-}
-.velo {
-  fill: #eef0e6;
-  opacity: 0.55;
+  fill: #e9ebe1;
 }
 .terreno {
   fill: #c5e0a2;
@@ -52,9 +45,7 @@
 }
 
 /* ─── Calles ─── */
-.calle-borde,
 .calle,
-.calle-raya,
 .interna-borde,
 .interna,
 .andador-borde,
@@ -64,26 +55,16 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.calle-borde.avenida {
-  stroke: #aaa596;
-  stroke-width: 15;
-}
+/* Calles perimetrales: solo una línea lisa (el nombre va en la capa de etiquetas).
+   OSM trae cada sentido y cada lateral de las avenidas como líneas separadas;
+   con este grosor se funden en una sola franja. */
 .calle.avenida {
-  stroke: #e9e5da;
-  stroke-width: 13;
-}
-.calle-borde.calle {
-  stroke: #b8b3a5;
-  stroke-width: 9;
+  stroke: #d4cebe;
+  stroke-width: 16;
 }
 .calle.calle {
-  stroke: #efebe1;
-  stroke-width: 7.5;
-}
-.calle-raya {
-  stroke: #fffdf6;
-  stroke-width: 0.5;
-  stroke-dasharray: 4 4;
+  stroke: #dad5c7;
+  stroke-width: 6;
 }
 .interna-borde {
   stroke: #bdb7a6;
@@ -289,6 +270,9 @@
 }
 .lugar-biblioteca .lugar-icono {
   stroke: #ffffff;
+}
+.lugar-escolares .lugar-fondo {
+  fill: #dbe9ff;
 }
 .lugar-comida .lugar-fondo,
 .lugar-cafeteria .lugar-fondo,
