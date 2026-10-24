@@ -95,3 +95,21 @@ Se guardan en `.env.local` (git lo ignora). Nunca subas llaves al repositorio.
 | ------------------------------- | --------------------------------- |
 | `VITE_SUPABASE_URL`             | Supabase → Project Settings → API |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API |
+
+## Base de datos (Supabase)
+
+Las migraciones están numeradas en `supabase/migrations/` y se aplican en orden:
+
+| Migración                      | Qué hace                                                                   |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `0001_esquema_inicial.sql`     | Tablas, tipos, RLS en todas las tablas, perfil automático y hook de correo |
+| `0002_zonas.sql`               | Zonas del mapa (se genera con `npm run zonas:sql`)                         |
+| `0003_crear_pines.sql`         | Funciones RPC `crear_pin` y `adjuntar_fotos`                               |
+| `0004_fotos_y_tiempo_real.sql` | Bucket privado `fotos`, sus políticas y tiempo real para `pines`           |
+| `0005_ajustes_rendimiento.sql` | Índice faltante y políticas del admin separadas por acción                 |
+
+`supabase/seed.sql` agrega los datos de demo (semestre vigente y el punto seguro de la Biblioteca).
+
+**Seguridad:** el cliente no escribe directo en las tablas importantes; usa funciones RPC que revisan la sesión. El dato ciego y la foto nítida solo los ve quien encontró el objeto. Para comprobarlo, pega `supabase/tests/seguridad.sql` en el SQL Editor: crea dos usuarios de prueba dentro de una transacción que se revierte y muestra el resultado de cada regla.
+
+**Inicio de sesión:** código de 6 dígitos por correo (OTP). Solo se aceptan correos `@morelia.tecnm.mx`: lo valida la app, el hook "Before User Created" y un trigger en la base de datos.
