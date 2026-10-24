@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+
+/* Colores y fuentes base. La paleta definitiva se elige en la Fase 1. */
+@theme {
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --color-fondo: #14161c;
+  --color-superficie: #1d2029;
+  --color-acento: #f59518;
+  --color-pin-rojo: #ef4444;
+  --color-pin-verde: #22c55e;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-fondo text-neutral-100 antialiased;
+}
