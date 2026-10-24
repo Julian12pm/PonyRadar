@@ -1,13 +1,13 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/baloo-2';
 
-/* Colores y fuentes base. La paleta definitiva se elige en la Fase 1. */
+/* Paleta "maqueta": tinta azul oscuro, pines rojo y verde, acentos cálidos del plano oficial */
 @theme {
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --color-fondo: #14161c;
-  --color-superficie: #1d2029;
-  --color-acento: #f59518;
-  --color-pin-rojo: #ef4444;
-  --color-pin-verde: #22c55e;
+  --font-sans: 'Baloo 2 Variable', system-ui, sans-serif;
+  --color-tinta: #2b3a4a;
+  --color-pin-rojo: #f2545b;
+  --color-pin-verde: #2fb36f;
+  --color-techo: #f6a650;
 }
 
 html,
@@ -17,5 +17,37 @@ body,
 }
 
 body {
-  @apply bg-fondo text-neutral-100 antialiased;
+  @apply text-tinta antialiased;
+  overscroll-behavior: none;
+}
+
+/* Piezas de interfaz con borde grueso y sombra sólida, como piezas de maqueta */
+@layer components {
+  .tarjeta {
+    @apply rounded-[20px] border-[2.5px] border-tinta bg-white shadow-[0_4px_0_#2b3a4a22];
+  }
+  .chips {
+    scrollbar-width: none;
+  }
+  .chip {
+    @apply shrink-0 rounded-full bg-[#eef3f6] px-3 pt-0.5 text-[14px] font-bold whitespace-nowrap;
+  }
+  .chip-activo {
+    @apply bg-tinta text-white;
+  }
+  .pista-uso {
+    @apply mx-auto mb-2.5 inline-block rounded-full bg-tinta px-3 pt-1 pb-0.5 text-sm font-semibold text-white;
+  }
+  .boton {
+    @apply rounded-[18px] border-[2.5px] border-tinta px-3 pt-3 pb-2 text-[17px] font-extrabold text-white shadow-[0_4px_0_#2b3a4a] active:translate-y-0.5 active:shadow-[0_2px_0_#2b3a4a];
+  }
+  .boton-rojo {
+    @apply bg-pin-rojo;
+  }
+  .boton-verde {
+    @apply bg-pin-verde;
+  }
+  .atribucion {
+    @apply mt-1.5 block text-right text-[10px] text-tinta/70;
+  }
 }
