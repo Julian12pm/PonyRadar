@@ -113,3 +113,25 @@ Las migraciones están numeradas en `supabase/migrations/` y se aplican en orden
 **Seguridad:** el cliente no escribe directo en las tablas importantes; usa funciones RPC que revisan la sesión. El dato ciego y la foto nítida solo los ve quien encontró el objeto. Para comprobarlo, pega `supabase/tests/seguridad.sql` en el SQL Editor: crea dos usuarios de prueba dentro de una transacción que se revierte y muestra el resultado de cada regla.
 
 **Inicio de sesión:** código de 6 dígitos por correo (OTP). Solo se aceptan correos `@morelia.tecnm.mx`: lo valida la app, el hook "Before User Created" y un trigger en la base de datos.
+
+## Configuración del panel de Supabase
+
+Pasos que se hacen a mano en el panel del proyecto (no hay contraseñas en este repositorio):
+
+1. **SMTP propio** (Authentication → Emails → SMTP Settings): activar "Custom SMTP" con la cuenta de Microsoft 365 del Tec.
+   - Host: `smtp.office365.com` · Puerto: `587`
+   - Usuario y contraseña: los de la cuenta que envía los correos (se escriben solo en el panel).
+   - Remitente: esa misma cuenta institucional.
+2. **Plantillas de correo** (Authentication → Emails → Templates): en **Magic link** y en **Confirm sign up**, poner el código con `{{ .Token }}`:
+   - Asunto: `Tu código de PonyRadar`
+   - Cuerpo:
+     ```html
+     <h2>Tu código para entrar a PonyRadar</h2>
+     <p>Escribe este código en la app:</p>
+     <p style="font-size:32px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+     <p>Si no lo pediste, ignora este correo.</p>
+     ```
+3. **Hook de registro** (Authentication → Hooks → Before User Created): tipo "Postgres", esquema `public`, función `hook_solo_correo_institucional`.
+4. **Código de 6 dígitos** (Authentication → Sign In / Providers → Email): _Email OTP Length_ = `6`.
+5. **Límite de correos** (Authentication → Rate Limits): envío de correos en `100` por hora.
+6. **Migraciones y datos de demo:** aplicar `supabase/migrations/` en orden y luego `supabase/seed.sql` (SQL Editor o Supabase CLI).
