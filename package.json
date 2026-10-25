@@ -11,6 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "iconos": "node scripts/iconos/generar.mjs",
+    "revisar:pantallas": "node scripts/revision/pantallas.mjs",
+    "revisar:pwa": "node scripts/revision/pwa.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

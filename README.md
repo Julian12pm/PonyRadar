@@ -23,19 +23,22 @@ npm run dev                  # abre http://localhost:5173
 
 ## Comandos
 
-| Comando                 | Qué hace                                          |
-| ----------------------- | ------------------------------------------------- |
-| `npm run dev`           | Servidor de desarrollo con recarga automática     |
-| `npm run build`         | Genera la versión de producción en `dist/`        |
-| `npm run preview`       | Sirve `dist/` para probar el build                |
-| `npm run lint`          | Revisa el código con ESLint                       |
-| `npm run format`        | Da formato a todo con Prettier                    |
-| `npm run format:check`  | Verifica el formato sin cambiar nada (lo usa CI)  |
-| `npm test`              | Corre las pruebas una vez                         |
-| `npm run test:watch`    | Corre las pruebas cada vez que guardas            |
-| `npm run coverage`      | Pruebas + reporte de cobertura en `coverage/`     |
-| `npm run osm:descargar` | Baja de OpenStreetMap los datos crudos del campus |
-| `npm run osm:convertir` | Genera `src/mapa/campus-osm.json` para el croquis |
+| Comando                     | Qué hace                                                                                  |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `npm run dev`               | Servidor de desarrollo con recarga automática                                             |
+| `npm run build`             | Genera la versión de producción en `dist/`                                                |
+| `npm run preview`           | Sirve `dist/` para probar el build                                                        |
+| `npm run lint`              | Revisa el código con ESLint                                                               |
+| `npm run format`            | Da formato a todo con Prettier                                                            |
+| `npm run format:check`      | Verifica el formato sin cambiar nada (lo usa CI)                                          |
+| `npm test`                  | Corre las pruebas una vez                                                                 |
+| `npm run test:watch`        | Corre las pruebas cada vez que guardas                                                    |
+| `npm run coverage`          | Pruebas + reporte de cobertura en `coverage/`                                             |
+| `npm run osm:descargar`     | Baja de OpenStreetMap los datos crudos del campus                                         |
+| `npm run osm:convertir`     | Genera `src/mapa/campus-osm.json` para el croquis                                         |
+| `npm run iconos`            | Genera los íconos PNG de la app desde `scripts/iconos/icono.svg`                          |
+| `npm run revisar:pantallas` | Recorre todas las pantallas con Playwright (con `npm run dev` abierto)                    |
+| `npm run revisar:pwa`       | Revisa que la app sea instalable y abra sin red (con `npm run preview` en el puerto 4173) |
 
 ## Datos del mapa
 
@@ -48,6 +51,10 @@ Para actualizarlo: `npm run osm:descargar` y luego `npm run osm:convertir`. Los 
 Las pruebas usan **Vitest** y **Testing Library**, y viven junto al archivo que prueban (`correo.js` → `correo.test.js`). La lógica importante (detección de zona, strikes, caducidad, enlace de Teams, validación de correo) se escribe como funciones puras en `src/lib/` o `src/mapa/` para poder probarla sin navegador ni base de datos.
 
 Después de `npm run coverage`, abre `coverage/index.html` para ver el reporte de cobertura.
+
+**Revisión de pantallas:** `npm run revisar:pantallas` abre cada pantalla (inicio de sesión, mapa, hojas, Mis casos, Listas y los dos paneles) en celular (390×844) y escritorio (1440×900) con Supabase simulado, guarda capturas en `.playwright-mcp/revision/` y falla si hay errores de JavaScript, desbordamiento horizontal, botones sin nombre o imágenes sin texto alternativo. La primera vez instala el navegador con `npx playwright install chromium`.
+
+**Pruebas de la base de datos:** los archivos de `supabase/tests/` se pegan en el SQL Editor; corren dentro de una transacción que se revierte y no dejan datos.
 
 ## Estructura de carpetas
 
@@ -174,6 +181,21 @@ El botón **Panel** del mapa aparece para el personal de puntos seguros y para e
 - **Admin** (`/admin`): usuarios (rol, strikes con "Quitar", desbloquear o levantar suspensión), puntos seguros (crear, activar y asignar personal por correo, incluido "Asignarme a mí"), semestres y objetos en camino ("Regresar al mapa").
 - **Roles:** el primer admin se asigna por SQL (`update public.perfiles set rol = 'admin' where correo = '…';`). Desde la app solo un admin cambia roles y nadie puede quitarse a sí mismo el rol de admin. Asignar a alguien a un punto seguro lo pasa a "punto seguro" (un admin conserva su rol); quitarlo de todos lo regresa a "comunidad".
 - **Correos con "+":** se aceptan alias como `l23121115+admin@morelia.tecnm.mx` (Microsoft 365 los entrega en la misma bandeja). Lo validan la app, el hook y el trigger, y siempre exigen `@morelia.tecnm.mx` al final.
+
+## App instalable (PWA)
+
+`vite-plugin-pwa` genera el manifiesto (nombre, colores e íconos de PonyRadar) y un service worker que guarda la app para que abra rápido y sin red, y se actualiza sola al publicar una versión nueva. Los datos de Supabase no pasan por el service worker. Los íconos salen de `scripts/iconos/icono.svg` con `npm run iconos`.
+
+Para instalarla: en Chrome de Android, menú → "Instalar app"; en iPhone, Safari → Compartir → "Agregar a inicio".
+
+## Publicación en Vercel
+
+`vercel.json` ya trae el build (`npm run build` → `dist/`), las rutas de la app (todo va a `index.html`, así `/casos` o `/admin` abren aunque se recargue la página) y los encabezados de caché (el service worker nunca se guarda en caché; los archivos de `assets/` sí, porque su nombre cambia en cada versión).
+
+1. En Vercel: **Add New → Project → Import** el repositorio de GitHub. Vercel detecta Vite.
+2. **Environment Variables** (Production y Preview): `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`, con los mismos valores que `.env.local`. La llave publicable puede estar en el navegador: lo que protege los datos es RLS.
+3. **Production Branch:** `main`. Cada push a otras ramas (`dev`, `feat/*`) crea una vista previa.
+4. En Supabase → **Authentication → URL Configuration**: Site URL = la dirección de producción de Vercel, y en Redirect URLs agrega las vistas previas (`https://*.vercel.app/**`).
 
 ## Si Supabase no responde
 
