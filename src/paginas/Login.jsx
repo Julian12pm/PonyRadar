@@ -46,7 +46,10 @@ export default function Login() {
   return (
     <main className="grid min-h-full place-items-center bg-fondo px-4 py-8">
       <div className="tarjeta w-full max-w-sm px-5 pt-5 pb-6">
-        <h1 className="text-3xl font-extrabold">PonyRadar</h1>
+        <h1 className="flex items-center gap-3 text-3xl font-extrabold">
+          <img src="/favicon.svg" alt="" className="size-11 shrink-0" />
+          PonyRadar
+        </h1>
         <p className="mt-1 text-tinta/75">
           Objetos perdidos y encontrados del Tec de Morelia, sobre el mapa del campus.
         </p>

@@ -105,7 +105,11 @@ export default function Mapa({ perfil, avisos = SIN_AVISOS }) {
       <header className="shrink-0 px-3 pt-3 pb-1">
         <div className="tarjeta mx-auto max-w-xl px-4 pt-2.5 pb-3">
           <div className="flex items-center gap-2">
-            <h1 className="flex-1 text-2xl leading-tight font-extrabold">PonyRadar</h1>
+            {/* En celular solo el ícono, para que quepan todos los botones (con el de Panel son 4) */}
+            <h1 className="flex flex-1 items-center gap-2 text-2xl leading-tight font-extrabold">
+              <img src="/favicon.svg" alt="PonyRadar" className="size-8 shrink-0 sm:hidden" />
+              <span className="hidden sm:inline">PonyRadar</span>
+            </h1>
             <span className="hidden max-w-[30%] truncate text-sm text-tinta/70 sm:inline">
               {perfil?.nombre}
             </span>
