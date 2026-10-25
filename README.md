@@ -100,20 +100,21 @@ Se guardan en `.env.local` (git lo ignora). Nunca subas llaves al repositorio.
 
 Las migraciones están numeradas en `supabase/migrations/` y se aplican en orden:
 
-| Migración                      | Qué hace                                                                   |
-| ------------------------------ | -------------------------------------------------------------------------- |
-| `0001_esquema_inicial.sql`     | Tablas, tipos, RLS en todas las tablas, perfil automático y hook de correo |
-| `0002_zonas.sql`               | Zonas del mapa (se genera con `npm run zonas:sql`)                         |
-| `0003_crear_pines.sql`         | Funciones RPC `crear_pin` y `adjuntar_fotos`                               |
-| `0004_fotos_y_tiempo_real.sql` | Bucket privado `fotos`, sus políticas y tiempo real para `pines`           |
-| `0005_ajustes_rendimiento.sql` | Índice faltante y políticas del admin separadas por acción                 |
-| `0006_reclamos_y_entrega.sql`  | Es mío, Lo encontré, aceptar/rechazar/impostor, clave, contacto y avisos   |
+| Migración                          | Qué hace                                                                         |
+| ---------------------------------- | -------------------------------------------------------------------------------- |
+| `0001_esquema_inicial.sql`         | Tablas, tipos, RLS en todas las tablas, perfil automático y hook de correo       |
+| `0002_zonas.sql`                   | Zonas del mapa (se genera con `npm run zonas:sql`)                               |
+| `0003_crear_pines.sql`             | Funciones RPC `crear_pin` y `adjuntar_fotos`                                     |
+| `0004_fotos_y_tiempo_real.sql`     | Bucket privado `fotos`, sus políticas y tiempo real para `pines`                 |
+| `0005_ajustes_rendimiento.sql`     | Índice faltante y políticas del admin separadas por acción                       |
+| `0006_reclamos_y_entrega.sql`      | Es mío, Lo encontré, aceptar/rechazar/impostor, clave, contacto y avisos         |
+| `0007_puntos_seguros_y_reglas.sql` | Puntos seguros, strikes y suspensión, caducidad (pg_cron), renovar, no reclamado |
 
 `supabase/seed.sql` agrega los datos de demo (semestre vigente y el punto seguro de la Biblioteca).
 
 **Seguridad:** el cliente no escribe directo en las tablas importantes; usa funciones RPC que revisan la sesión. El dato ciego y la foto nítida solo los ve quien encontró el objeto. Para comprobarlo, pega `supabase/tests/seguridad.sql` en el SQL Editor: crea dos usuarios de prueba dentro de una transacción que se revierte y muestra el resultado de cada regla.
 
-Las reglas de reclamos y entrega se prueban igual con `supabase/tests/reclamos.sql` (tres usuarios: quien encontró, el dueño y alguien más que reclama).
+Las reglas de puntos seguros, strikes y caducidad se prueban con `supabase/tests/reglas.sql`. Las reglas de reclamos y entrega se prueban igual con `supabase/tests/reclamos.sql` (tres usuarios: quien encontró, el dueño y alguien más que reclama).
 
 **Inicio de sesión:** código de 6 dígitos por correo (OTP). Solo se aceptan correos `@morelia.tecnm.mx`: lo valida la app, el hook "Before User Created" y un trigger en la base de datos.
 
@@ -152,6 +153,17 @@ Todo pasa en funciones RPC de `0006_reclamos_y_entrega.sql`; la app solo las lla
 **Lo encontré** (pin rojo ajeno) crea un pin verde vinculado en el mismo lugar con el dato ciego de quien lo encontró, y avisa al dueño, que lo reclama con "Es mío". Al entregarlo, el pin rojo también se cierra.
 
 **Avisos:** se crean en el servidor (reclamos, respuestas, "Lo encontré" y pines verdes de la misma categoría y zona que un rojo tuyo), llegan en tiempo real y se cuentan en el botón **Mis casos**. Abrir `/?pin=<id>` abre ese pin en el mapa.
+
+## Puntos seguros y reglas
+
+Todo lo aplica el servidor (`0007_puntos_seguros_y_reglas.sql`); la app lo muestra (`src/lib/reglas.js`).
+
+- **Punto seguro:** quien encontró elige "Dejar en un punto seguro" → `en_camino`. El personal confirma la recepción → `en_resguardo` y quien lo encontró queda deslindado. Si en 24 h nadie confirma, se le avisa (una vez) y sigue `en_camino`; solo el admin puede regresarlo a `activo`.
+- **Reclamar en resguardo:** el dueño pulsa "Es mío" desde la lista "En resguardo". Responde y escribe la clave el personal del punto seguro; el dueño ve dónde recogerlo (sin correo personal).
+- **Strikes** (solo los del semestre vigente que el admin no haya quitado): 1–2 aviso, 3 suspensión de 7 días, 4 de 30 días, 5+ bloqueo. Suspendido = ve el mapa, no publica ni reclama. "Mis casos" muestra cuántos tiene y qué pasa con el siguiente.
+- **Caducidad** (tarea de pg_cron cada 10 minutos): `activo` → `caducado` a las 72 h; una aceptación sin entrega en 72 h se cancela sin strike. Un pin verde vencido pide llevarlo a un punto seguro.
+- **Listas** (`/listas`): "Se busca" (rojos caducados, 30 días; ahí también se puede marcar "Lo encontré") y "En resguardo" (por punto seguro). El dueño puede **renovar** un pin rojo una sola vez (72 h más en el mapa).
+- **No reclamado:** al terminar el semestre en que se recibió, el personal lo marca `no_reclamado` (su pantalla llega en la Fase 5).
 
 ## Si Supabase no responde
 

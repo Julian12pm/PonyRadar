@@ -4,6 +4,7 @@
 // En tu propio pin con solicitudes, lleva a "Mis casos".
 import { useEffect, useState } from 'react'
 import { loEncontre, miSolicitudAlPin, solicitarPin } from '../lib/casos.js'
+import { enSeBusca } from '../lib/reglas.js'
 
 const largoValido = (texto) => texto.trim().length >= 3 && texto.trim().length <= 200
 
@@ -121,7 +122,9 @@ function FormularioLoEncontre({ pin, onListo, onCancelar }) {
 export default function AccionesPin({ pin, yo, habilitado, motivoSoloLectura, onVerCasos }) {
   const esMio = pin.autorId === yo
   const reclamable =
-    !esMio && pin.tipo === 'verde' && ['activo', 'con_solicitud'].includes(pin.estado)
+    !esMio &&
+    pin.tipo === 'verde' &&
+    ['activo', 'con_solicitud', 'en_resguardo'].includes(pin.estado)
   const [formulario, setFormulario] = useState(null) // 'es-mio' | 'lo-encontre'
   const [hecho, setHecho] = useState(null)
   // undefined mientras se revisa si ya enviaste solicitud a este pin
@@ -177,7 +180,8 @@ export default function AccionesPin({ pin, yo, habilitado, motivoSoloLectura, on
     )
   }
 
-  const puedeLoEncontre = pin.tipo === 'rojo' && pin.estado === 'activo'
+  // Pin rojo en el mapa o en la lista "Se busca"
+  const puedeLoEncontre = pin.tipo === 'rojo' && (pin.estado === 'activo' || enSeBusca(pin))
   if (!reclamable && !puedeLoEncontre) return null
   if (!habilitado) return <p className="mt-3 text-sm font-semibold">{motivoSoloLectura}</p>
 

@@ -12,6 +12,7 @@ import TarjetaPin from '../componentes/TarjetaPin.jsx'
 import { MENSAJE_SIN_CONEXION, esErrorDeRed } from '../lib/conexion.js'
 import { filtrarPines } from '../lib/filtros.js'
 import { crearPin } from '../lib/pines.js'
+import { motivoSuspension } from '../lib/reglas.js'
 import { cerrarSesion, puedePublicar } from '../lib/sesion.js'
 import { useDatosDelMapa } from '../lib/useDatosDelMapa.js'
 import MapaCampus from '../mapa/MapaCampus.jsx'
@@ -47,7 +48,8 @@ export default function Mapa({ perfil, avisos = SIN_AVISOS }) {
   const habilitado = enLinea && !suspendido
   const motivoSoloLectura = !enLinea
     ? 'Sin conexión con el servidor: por ahora solo puedes ver el mapa.'
-    : 'Tu cuenta está suspendida: puedes ver el mapa, pero no publicar pines.'
+    : (motivoSuspension(perfil) ??
+      'Tu cuenta está suspendida: puedes ver el mapa, pero no publicar pines.')
 
   const seguros = useMemo(
     () =>
@@ -103,7 +105,12 @@ export default function Mapa({ perfil, avisos = SIN_AVISOS }) {
         <div className="tarjeta mx-auto max-w-xl px-4 pt-2.5 pb-3">
           <div className="flex items-center gap-2">
             <h1 className="flex-1 text-2xl leading-tight font-extrabold">PonyRadar</h1>
-            <span className="max-w-[35%] truncate text-sm text-tinta/70">{perfil?.nombre}</span>
+            <span className="hidden max-w-[30%] truncate text-sm text-tinta/70 sm:inline">
+              {perfil?.nombre}
+            </span>
+            <button type="button" className="chip" onClick={() => navegar('/listas')}>
+              Listas
+            </button>
             <button type="button" className="chip relative" onClick={() => navegar('/casos')}>
               Mis casos
               {avisos.noLeidos > 0 && (
@@ -248,6 +255,15 @@ export default function Mapa({ perfil, avisos = SIN_AVISOS }) {
               ? '1 objeto en resguardo.'
               : `${seguroAbierto.cantidad} objetos en resguardo.`}
           </p>
+          {seguroAbierto.cantidad > 0 && (
+            <button
+              type="button"
+              className="boton-chico mt-3 w-full"
+              onClick={() => navegar('/listas?vista=resguardo')}
+            >
+              Ver lo que hay en resguardo
+            </button>
+          )}
         </Hoja>
       )}
     </main>

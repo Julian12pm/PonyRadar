@@ -190,13 +190,89 @@ describe('accionPendiente, casoCerrado y resumenCaso', () => {
     expect(casoCerrado(reclame({ estado: 'rechazada' }))).toBe(true)
   })
 
-  it('pines entregados o vencidos quedan cerrados', () => {
+  it('pines entregados quedan cerrados', () => {
     expect(casoCerrado(encontre([], { estado: 'entregado' }))).toBe(true)
-    expect(casoCerrado(encontre([], { estado: 'caducado' }))).toBe(true)
-    expect(resumenCaso(encontre([], { estado: 'caducado' }))).toMatch(/72 horas/)
     expect(
       resumenCaso({ papel: 'perdi', pin: pin('r1', { tipo: 'rojo', estado: 'entregado' }) }),
     ).toBe('Lo recuperaste')
+  })
+})
+
+describe('Fase 4: puntos seguros, caducidad y renovación', () => {
+  const ahora = new Date('2026-10-24T12:00:00Z')
+  const hace = (dias) => new Date(ahora.getTime() - dias * 86400000).toISOString()
+  const encontre = (cambios, solicitudes = []) => ({
+    papel: 'encontre',
+    pin: pin('v1', cambios),
+    solicitudes,
+    punto: 'Biblioteca (AF)',
+  })
+  const perdi = (cambios, encontrados = []) => ({
+    papel: 'perdi',
+    pin: pin('r1', { tipo: 'rojo', ...cambios }),
+    encontrados,
+  })
+
+  it('un pin verde vencido pide llevarlo a un punto seguro', () => {
+    const caso = encontre({ estado: 'caducado', expira: hace(1) })
+    expect(accionPendiente(caso, ahora)).toBe('llevar')
+    expect(casoCerrado(caso, ahora)).toBe(false)
+    expect(resumenCaso(caso, ahora)).toMatch(/llévalo a un punto seguro/)
+  })
+
+  it('en camino espera la confirmación; en resguardo, quien lo encontró queda deslindado', () => {
+    const enCamino = encontre({ estado: 'en_camino' })
+    expect(accionPendiente(enCamino, ahora)).toBeNull()
+    expect(casoCerrado(enCamino, ahora)).toBe(false)
+    expect(resumenCaso(enCamino, ahora)).toMatch(/Llévalo a Biblioteca \(AF\)/)
+    // Aunque vea solicitudes del objeto, ya no le toca responderlas
+    const resguardo = encontre({ estado: 'en_resguardo' }, [solicitud('s1')])
+    expect(accionPendiente(resguardo, ahora)).toBeNull()
+    expect(casoCerrado(resguardo, ahora)).toBe(true)
+    expect(resumenCaso(resguardo, ahora)).toMatch(/ya no es tu responsabilidad/)
+    expect(resumenCaso(encontre({ estado: 'no_reclamado' }), ahora)).toMatch(/Nadie lo reclamó/)
+  })
+
+  it('un pin rojo vencido se renueva una vez y sigue en "Se busca" 30 días', () => {
+    const vencido = perdi({ estado: 'caducado', expira: hace(2) })
+    expect(accionPendiente(vencido, ahora)).toBe('renovar')
+    expect(resumenCaso(vencido, ahora)).toMatch(/"Se busca" 28 días más\. Puedes renovarlo/)
+    const yaRenovado = perdi({ estado: 'caducado', expira: hace(2), renovado: true })
+    expect(accionPendiente(yaRenovado, ahora)).toBeNull()
+    expect(casoCerrado(yaRenovado, ahora)).toBe(false)
+    expect(resumenCaso(yaRenovado, ahora)).toBe('Venció: sigue en "Se busca" 28 días más')
+    const fuera = perdi({ estado: 'caducado', expira: hace(40), renovado: true })
+    expect(casoCerrado(fuera, ahora)).toBe(true)
+  })
+
+  it('"Lo encontré" desde "Se busca" también pide reclamar', () => {
+    const caso = perdi({ estado: 'caducado', expira: hace(3) }, [pin('v9', { estado: 'activo' })])
+    expect(accionPendiente(caso, ahora)).toBe('reclamar')
+  })
+
+  it('el dueño de un objeto en resguardo lo recoge en el punto seguro', () => {
+    const caso = {
+      papel: 'reclame',
+      pin: pin('v1', { estado: 'en_resguardo' }),
+      solicitud: solicitud('s1', { estado: 'aceptada', solicitanteId: 'yo' }),
+      punto: 'Biblioteca (AF)',
+    }
+    expect(accionPendiente(caso, ahora)).toBe('clave')
+    expect(resumenCaso(caso, ahora)).toMatch(/recógelo en Biblioteca \(AF\)/)
+    const pendiente = { ...caso, solicitud: solicitud('s1', { solicitanteId: 'yo' }) }
+    expect(resumenCaso(pendiente, ahora)).toBe('Esperando respuesta de Biblioteca (AF)')
+  })
+
+  it('armarCasos pone el nombre del punto seguro', () => {
+    const [caso] = armarCasos(
+      {
+        pines: [pin('v1', { estado: 'en_camino', puntoSeguroId: 'p1' })],
+        solicitudes: [],
+        puntos: [{ id: 'p1', nombre: 'Biblioteca (AF)' }],
+      },
+      'yo',
+    )
+    expect(caso.punto).toBe('Biblioteca (AF)')
   })
 })
 
@@ -205,5 +281,12 @@ describe('textoAviso', () => {
     expect(textoAviso({ tipo: 'reclamaron_mi_objeto', titulo: 'Termo' })).toMatch(/"Termo" es suyo/)
     expect(textoAviso({ tipo: 'lo_encontraron', titulo: null })).toMatch(/"tu objeto"/)
     expect(textoAviso({ tipo: 'desconocido' })).toBe('Tienes un aviso nuevo.')
+    // Un rechazo por impostor se avisa como strike
+    expect(
+      textoAviso({ tipo: 'solicitud_rechazada', titulo: 'Termo', solicitudEstado: 'impostor' }),
+    ).toMatch(/recibiste un strike/)
+    expect(
+      textoAviso({ tipo: 'solicitud_rechazada', titulo: 'Termo', solicitudEstado: 'rechazada' }),
+    ).toMatch(/no fue aceptada/)
   })
 })

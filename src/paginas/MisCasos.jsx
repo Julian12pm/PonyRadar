@@ -3,7 +3,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import TarjetaCaso from '../componentes/TarjetaCaso.jsx'
-import { accionPendiente, cargarCasos, casoCerrado, textoAviso } from '../lib/casos.js'
+import {
+  accionPendiente,
+  cargarCasos,
+  cargarPuntosActivos,
+  casoCerrado,
+  misStrikes,
+  textoAviso,
+} from '../lib/casos.js'
+import { mensajeStrikes } from '../lib/reglas.js'
 import { haceCuanto } from '../lib/tiempo.js'
 
 const GRUPOS = [
@@ -17,6 +25,8 @@ const grupoDe = (caso) =>
 export default function MisCasos({ perfil, avisos }) {
   const navegar = useNavigate()
   const [casos, setCasos] = useState(null)
+  const [puntos, setPuntos] = useState([])
+  const [strikes, setStrikes] = useState(0)
   const [error, setError] = useState(null)
   const [recarga, setRecarga] = useState(0)
   const yo = perfil?.id
@@ -26,10 +36,17 @@ export default function MisCasos({ perfil, avisos }) {
   useEffect(() => {
     if (!yo) return undefined
     let vigente = true
-    cargarCasos(yo)
-      .then((c) => {
+    // Los strikes y los puntos seguros son extra: si fallan, los casos se muestran igual
+    Promise.all([
+      cargarCasos(yo),
+      cargarPuntosActivos().catch(() => []),
+      misStrikes().catch(() => 0),
+    ])
+      .then(([c, p, n]) => {
         if (!vigente) return
         setCasos(c)
+        setPuntos(p)
+        setStrikes(n ?? 0)
         setError(null)
       })
       .catch((e) => vigente && setError(e.message))
@@ -44,7 +61,10 @@ export default function MisCasos({ perfil, avisos }) {
   }, [noLeidos, marcarLeidos])
 
   const recargar = useCallback(() => setRecarga((n) => n + 1), [])
-  const verPin = (id) => navegar(`/?pin=${id}`)
+  // Un objeto en resguardo no está en el mapa: se abre en la lista "En resguardo"
+  const verPin = (id, estado) =>
+    navegar(estado === 'en_resguardo' ? `/listas?vista=resguardo&pin=${id}` : `/?pin=${id}`)
+  const avisoStrikes = mensajeStrikes(strikes, perfil)
   // Los avisos de pines ajenos ("Lo encontré", coincidencia) abren el pin en el mapa;
   // los demás llevan a la tarjeta del caso en esta misma pantalla
   const abrirAviso = (aviso) => {
@@ -65,6 +85,11 @@ export default function MisCasos({ perfil, avisos }) {
       </header>
 
       <div className="mx-auto grid max-w-xl gap-5 px-3 pb-8">
+        {avisoStrikes && (
+          <p role="status" className="aviso-cuenta">
+            {avisoStrikes}
+          </p>
+        )}
         {lista.length > 0 && (
           <section aria-labelledby="titulo-avisos">
             <h2 id="titulo-avisos" className="titulo-grupo">
@@ -124,7 +149,7 @@ export default function MisCasos({ perfil, avisos }) {
                 <div className="grid gap-3">
                   {delGrupo.map((c) => (
                     <div key={c.id} id={`caso-${c.pin.id}`}>
-                      <TarjetaCaso caso={c} onCambio={recargar} onVerPin={verPin} />
+                      <TarjetaCaso caso={c} puntos={puntos} onCambio={recargar} onVerPin={verPin} />
                     </div>
                   ))}
                 </div>

@@ -1,6 +1,7 @@
 // Casos de reclamo y entrega: "Es mío", "Lo encontré", aceptar/rechazar, clave de liberación,
 // contacto por Teams y avisos. Todo lo sensible lo hace el servidor con funciones RPC.
 import { COLUMNAS, errorDe, filaAPin } from './pines.js'
+import { debeLlevarseAPuntoSeguro, diasEnSeBusca, enSeBusca, puedeRenovar } from './reglas.js'
 import { supabase } from './supabase.js'
 
 // Nunca "*": la columna clave_hash no se puede leer (y pedirla da error de permisos)
@@ -61,6 +62,16 @@ export async function contactoDelCaso(solicitudId) {
   return filas?.[0] ?? null
 }
 
+/** Quien encontró deja el objeto en un punto seguro (queda "en camino"). */
+export const dejarEnPuntoSeguro = (pinId, puntoId) =>
+  llamar('dejar_en_punto_seguro', { p_pin: pinId, p_punto: puntoId })
+
+/** Renueva un pin rojo caducado 72 h más (una sola vez). */
+export const renovarPin = (pinId) => llamar('renovar_pin', { p_pin: pinId })
+
+/** Strikes vigentes del usuario (semestre actual, sin los que quitó el admin). */
+export const misStrikes = () => llamar('mis_strikes')
+
 /** "Lo encontré" en un pin rojo: crea un pin verde vinculado. @returns id del pin verde */
 export const loEncontre = (pinRojoId, { descripcion = '', piso = '', datoCiego }) =>
   llamar('lo_encontre', {
@@ -76,7 +87,8 @@ export const loEncontre = (pinRojoId, { descripcion = '', piso = '', datoCiego }
  * Junta mis pines y las solicitudes que veo (las mías y las de mis pines) en una lista de casos.
  * Papel: 'encontre' (mi pin verde), 'perdi' (mi pin rojo) o 'reclame' (mi solicitud a otro pin).
  */
-export function armarCasos({ pines, solicitudes, encontrados = [] }, yo) {
+export function armarCasos({ pines, solicitudes, encontrados = [], puntos = [] }, yo) {
+  const nombrePunto = (pin) => puntos.find((p) => p.id === pin.puntoSeguroId)?.nombre ?? null
   const casos = pines.map((pin) => ({
     id: `pin-${pin.id}`,
     papel: pin.tipo === 'verde' ? 'encontre' : 'perdi',
@@ -84,10 +96,17 @@ export function armarCasos({ pines, solicitudes, encontrados = [] }, yo) {
     solicitudes: solicitudes.filter((s) => s.pinId === pin.id && s.solicitanteId !== yo),
     // Pines verdes que alguien creó con "Lo encontré" sobre mi pin rojo
     encontrados: encontrados.filter((v) => v.vinculadoA === pin.id),
+    punto: nombrePunto(pin),
   }))
   for (const s of solicitudes) {
     if (s.solicitanteId === yo && s.pin) {
-      casos.push({ id: `sol-${s.id}`, papel: 'reclame', pin: s.pin, solicitud: s })
+      casos.push({
+        id: `sol-${s.id}`,
+        papel: 'reclame',
+        pin: s.pin,
+        solicitud: s,
+        punto: nombrePunto(s.pin),
+      })
     }
   }
   const prioridad = (c) => (accionPendiente(c) ? 0 : casoCerrado(c) ? 2 : 1)
@@ -105,38 +124,61 @@ export function solicitudEnEntrega(caso) {
   return caso.solicitudes?.find((s) => s.estado === 'aceptada' && !s.entregada) ?? null
 }
 
+// Estados en los que el objeto ya no está con quien lo encontró
+const EN_PUNTO_SEGURO = ['en_camino', 'en_resguardo', 'no_reclamado']
+
 /**
  * Lo que el usuario tiene que hacer ahora en el caso, o null:
  * 'responder' (hay solicitudes por revisar), 'entregar' (escribir la clave del dueño),
  * 'clave' (el dueño debe pedir su clave y verse con quien lo tiene), 'reclamar' (alguien
- * encontró mi objeto perdido).
+ * encontró mi objeto perdido), 'llevar' (mi pin verde venció: llevarlo a un punto seguro),
+ * 'renovar' (mi pin rojo venció y aún puedo renovarlo).
  */
-export function accionPendiente(caso) {
+export function accionPendiente(caso, ahora = new Date()) {
   if (caso.papel === 'encontre') {
+    // En un punto seguro, las solicitudes las atiende su personal
+    if (EN_PUNTO_SEGURO.includes(caso.pin.estado)) return null
     if (solicitudEnEntrega(caso)) return 'entregar'
     if (caso.solicitudes.some((s) => s.estado === 'pendiente')) return 'responder'
+    if (debeLlevarseAPuntoSeguro(caso.pin, ahora)) return 'llevar'
     return null
   }
   if (caso.papel === 'reclame') {
     const s = caso.solicitud
     return s.estado === 'aceptada' && !s.entregada ? 'clave' : null
   }
-  const activos = caso.encontrados?.filter((v) => ['activo', 'con_solicitud'].includes(v.estado))
-  return caso.pin.estado === 'activo' && activos?.length ? 'reclamar' : null
+  const activos = caso.encontrados?.filter((v) =>
+    ['activo', 'con_solicitud', 'en_resguardo'].includes(v.estado),
+  )
+  if (['activo', 'caducado'].includes(caso.pin.estado) && activos?.length) return 'reclamar'
+  if (puedeRenovar(caso.pin, ahora)) return 'renovar'
+  return null
 }
 
-export function casoCerrado(caso) {
+export function casoCerrado(caso, ahora = new Date()) {
   if (caso.papel === 'reclame') {
-    return caso.solicitud.estado !== 'pendiente' && !accionPendiente(caso)
+    return caso.solicitud.estado !== 'pendiente' && !accionPendiente(caso, ahora)
   }
-  return ['entregado', 'caducado', 'no_reclamado'].includes(caso.pin.estado)
+  if (accionPendiente(caso, ahora)) return false
+  const { estado } = caso.pin
+  if (estado === 'caducado') return caso.papel === 'perdi' && !enSeBusca(caso.pin, ahora)
+  // Quien lo encontró queda deslindado al confirmarse el resguardo
+  if (estado === 'en_resguardo') return true
+  return ['entregado', 'no_reclamado'].includes(estado)
 }
 
 /** Frase corta con el estado del caso, desde el punto de vista del usuario. */
-export function resumenCaso(caso) {
+export function resumenCaso(caso, ahora = new Date()) {
+  const punto = caso.punto ?? 'el punto seguro'
   if (caso.papel === 'reclame') {
     const s = caso.solicitud
     if (s.entregada) return 'Lo recuperaste'
+    if (s.estado === 'aceptada' && caso.pin.estado === 'en_resguardo') {
+      return `Aceptaron tu solicitud: recógelo en ${punto} y dicta tu clave`
+    }
+    if (s.estado === 'pendiente' && caso.pin.estado === 'en_resguardo') {
+      return `Esperando respuesta de ${punto}`
+    }
     return (
       {
         pendiente: 'Esperando respuesta de quien lo encontró',
@@ -147,16 +189,28 @@ export function resumenCaso(caso) {
       }[s.estado] ?? s.estado
     )
   }
-  const accion = accionPendiente(caso)
+  const accion = accionPendiente(caso, ahora)
   if (accion === 'entregar') return 'Aceptaste una solicitud: espera la clave del dueño'
   if (accion === 'responder') {
     const n = caso.solicitudes.filter((s) => s.estado === 'pendiente').length
     return n === 1 ? '1 solicitud por revisar' : `${n} solicitudes por revisar`
   }
   if (accion === 'reclamar') return 'Alguien lo encontró: revisa si es tuyo'
+  if (accion === 'llevar') return 'Venció sin entregarse: llévalo a un punto seguro'
+  const dias = diasEnSeBusca(caso.pin, ahora)
+  const enLista = dias === 1 ? '1 día más' : `${dias} días más`
+  if (accion === 'renovar') {
+    return `Venció: sigue en "Se busca" ${enLista}. Puedes renovarlo una vez.`
+  }
+
   const estado = caso.pin.estado
   if (estado === 'entregado') return caso.papel === 'perdi' ? 'Lo recuperaste' : 'Entregado'
-  if (estado === 'caducado') return 'Venció: pasaron 72 horas'
+  if (estado === 'en_camino') return `Llévalo a ${punto}: esperando que confirmen que lo recibieron`
+  if (estado === 'en_resguardo') return `En resguardo en ${punto}: ya no es tu responsabilidad`
+  if (estado === 'no_reclamado') return 'Nadie lo reclamó este semestre'
+  if (estado === 'caducado') {
+    return enSeBusca(caso.pin, ahora) ? `Venció: sigue en "Se busca" ${enLista}` : 'Venció'
+  }
   if (estado === 'activo') {
     return caso.papel === 'perdi'
       ? 'Publicado: nadie lo ha encontrado aún'
@@ -167,7 +221,7 @@ export function resumenCaso(caso) {
 
 /** Carga mis casos: mis pines, las solicitudes que veo y los "Lo encontré" de mis pines rojos. */
 export async function cargarCasos(yo) {
-  const [pines, solicitudes] = await Promise.all([
+  const [pines, solicitudes, puntos] = await Promise.all([
     supabase
       .from('pines')
       .select(COLUMNAS)
@@ -179,6 +233,7 @@ export async function cargarCasos(yo) {
       .select(`${COLUMNAS_SOLICITUD}, pin:pines(${COLUMNAS})`)
       .order('creado_en', { ascending: false })
       .limit(100),
+    supabase.from('puntos_seguros').select('id, nombre'),
   ])
   if (pines.error) throw errorDe(pines.error)
   if (solicitudes.error) throw errorDe(solicitudes.error)
@@ -195,7 +250,12 @@ export async function cargarCasos(yo) {
     encontrados = data.map((f) => ({ ...filaAPin(f), vinculadoA: f.pin_vinculado_id }))
   }
   return armarCasos(
-    { pines: mios, solicitudes: solicitudes.data.map(filaASolicitud), encontrados },
+    {
+      pines: mios,
+      solicitudes: solicitudes.data.map(filaASolicitud),
+      encontrados,
+      puntos: puntos.data ?? [],
+    },
     yo,
   )
 }
@@ -219,14 +279,21 @@ const TEXTO_AVISO = {
   reclamaron_mi_objeto: (t) => `Alguien dice que "${t}" es suyo. Revisa su respuesta.`,
   solicitud_aceptada: (t) => `Aceptaron tu solicitud de "${t}". Pide tu clave de entrega.`,
   solicitud_rechazada: (t) => `Tu solicitud de "${t}" no fue aceptada.`,
+  impostor: (t) => `Tu solicitud de "${t}" no coincidió con el dato ciego: recibiste un strike.`,
   lo_encontraron: (t) => `Alguien encontró "${t}". Si es tuyo, pulsa "Es mío".`,
   coincidencia: (t) => `Encontraron algo parecido a "${t}" en la misma zona.`,
-  punto_seguro_sin_confirmar: (t) => `El punto seguro no ha confirmado "${t}".`,
+  punto_seguro_sin_confirmar: (t) =>
+    `El punto seguro aún no confirma que recibió "${t}". ¿Ya lo llevaste?`,
 }
 
 /** Texto del aviso para la lista (usa el título del pin si se conoce). */
 export function textoAviso(aviso) {
-  const texto = TEXTO_AVISO[aviso.tipo]
+  // Un rechazo por impostor se muestra como strike
+  const tipo =
+    aviso.tipo === 'solicitud_rechazada' && aviso.solicitudEstado === 'impostor'
+      ? 'impostor'
+      : aviso.tipo
+  const texto = TEXTO_AVISO[tipo]
   return texto ? texto(aviso.titulo ?? 'tu objeto') : 'Tienes un aviso nuevo.'
 }
 
@@ -239,13 +306,16 @@ export function filaAAviso(fila) {
     leido: fila.leido,
     creado: fila.creado_en,
     titulo: fila.pin?.titulo ?? null,
+    solicitudEstado: fila.solicitud?.estado ?? null,
   }
 }
 
 export async function cargarAvisos() {
   const { data, error } = await supabase
     .from('avisos')
-    .select('id, tipo, pin_id, solicitud_id, leido, creado_en, pin:pines(titulo)')
+    .select(
+      'id, tipo, pin_id, solicitud_id, leido, creado_en, pin:pines(titulo), solicitud:solicitudes(estado)',
+    )
     .order('creado_en', { ascending: false })
     .limit(30)
   if (error) throw errorDe(error)
@@ -272,4 +342,46 @@ export function escucharAvisos(yo, alLlegar) {
     )
     .subscribe()
   return () => supabase.removeChannel(canal)
+}
+
+// ─── Listas "Se busca" y "En resguardo" ───
+
+/** Puntos seguros activos (para elegir dónde dejar un objeto). */
+export async function cargarPuntosActivos() {
+  const { data, error } = await supabase
+    .from('puntos_seguros')
+    .select('id, nombre')
+    .eq('activo', true)
+    .order('nombre')
+  if (error) throw errorDe(error)
+  return data
+}
+
+/** Rojos caducados en los últimos 30 días y objetos en resguardo, con los puntos seguros. */
+export async function cargarListas(ahora = new Date()) {
+  const hace30 = new Date(ahora.getTime() - 30 * 86400000).toISOString()
+  const [seBusca, enResguardo, puntos] = await Promise.all([
+    supabase
+      .from('pines')
+      .select(COLUMNAS)
+      .eq('tipo', 'rojo')
+      .in('estado', ['activo', 'caducado'])
+      .lte('expira_en', ahora.toISOString())
+      .gt('expira_en', hace30)
+      .order('expira_en', { ascending: false })
+      .limit(100),
+    supabase
+      .from('pines')
+      .select(COLUMNAS)
+      .eq('estado', 'en_resguardo')
+      .order('creado_en', { ascending: false })
+      .limit(200),
+    supabase.from('puntos_seguros').select('id, nombre').eq('activo', true),
+  ])
+  for (const r of [seBusca, enResguardo, puntos]) if (r.error) throw errorDe(r.error)
+  return {
+    seBusca: seBusca.data.map(filaAPin),
+    enResguardo: enResguardo.data.map(filaAPin),
+    puntos: puntos.data,
+  }
 }
