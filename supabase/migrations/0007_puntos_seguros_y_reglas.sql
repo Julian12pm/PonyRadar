@@ -637,7 +637,7 @@ end;
 $$;
 revoke execute on function private.aplicar_reglas_de_tiempo() from public, anon, authenticated;
 
-create extension if not exists pg_cron;
+create extension if not exists pg_cron with schema pg_catalog;
 select cron.schedule(
   'ponyradar-reglas-de-tiempo',
   '*/10 * * * *',
