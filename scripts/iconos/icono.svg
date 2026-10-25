@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Ícono de PonyRadar: pin rojo (perdido) y pin verde (encontrado) con ondas de radar,
+       sobre la tinta del mapa. Es la fuente de los PNG de la app instalable. -->
+  <rect width="512" height="512" fill="#2b3a4a"/>
+  <!-- Ondas de radar -->
+  <g fill="none" stroke="#e9ebe1" stroke-linecap="round">
+    <path d="M118 182a170 170 0 0 1 96-96" stroke-width="22" opacity=".35"/>
+    <path d="M74 178a218 218 0 0 1 104-148" stroke-width="22" opacity=".18"/>
+  </g>
+  <!-- Pin verde (detrás) -->
+  <g transform="translate(300 196)">
+    <path d="M0 -92a92 92 0 0 1 92 92c0 66-92 168-92 168S-92 66-92 0a92 92 0 0 1 92-92z" fill="#1f7a4c" transform="translate(0 12)"/>
+    <path d="M0 -92a92 92 0 0 1 92 92c0 66-92 168-92 168S-92 66-92 0a92 92 0 0 1 92-92z" fill="#2fb36f"/>
+    <circle r="34" fill="#e9ebe1"/>
+  </g>
+  <!-- Pin rojo (delante) con sombra sólida, como pieza de maqueta -->
+  <g transform="translate(206 250)">
+    <path d="M0 -112a112 112 0 0 1 112 112c0 82-112 204-112 204S-112 82-112 0a112 112 0 0 1 112-112z" fill="#a8333a" transform="translate(0 14)"/>
+    <path d="M0 -112a112 112 0 0 1 112 112c0 82-112 204-112 204S-112 82-112 0a112 112 0 0 1 112-112z" fill="#f2545b"/>
+    <circle r="42" fill="#e9ebe1"/>
+  </g>
+</svg>
