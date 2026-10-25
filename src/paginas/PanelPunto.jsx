@@ -122,7 +122,7 @@ function EnResguardo({ pin, dato, semestres, solicitudes, onCambio }) {
           )}
         </div>
       )}
-      {verDato && dato && (
+      {verDato && dato && !pendientes.length && !entrega && (
         <p className="privado mt-2">
           Dato ciego: <strong>{dato}</strong>
         </p>
