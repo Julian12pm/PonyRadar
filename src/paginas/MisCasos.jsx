@@ -6,7 +6,7 @@ import TarjetaCaso from '../componentes/TarjetaCaso.jsx'
 import {
   accionPendiente,
   cargarCasos,
-  cargarPuntosActivos,
+  cargarPuntosDisponibles,
   casoCerrado,
   misStrikes,
   textoAviso,
@@ -40,7 +40,7 @@ export default function MisCasos({ perfil, avisos }) {
     // Los strikes y los puntos seguros son extra: si fallan, los casos se muestran igual
     Promise.all([
       cargarCasos(yo),
-      cargarPuntosActivos().catch(() => []),
+      cargarPuntosDisponibles().catch(() => []),
       misStrikes().catch(() => 0),
     ])
       .then(([c, p, n]) => {

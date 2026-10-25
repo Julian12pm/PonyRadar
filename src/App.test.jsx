@@ -44,7 +44,7 @@ vi.mock('./lib/casos.js', async (original) => ({
   solicitarPin: vi.fn(async () => 'sol-1'),
   loEncontre: vi.fn(async () => 'verde-1'),
   cargarCasos: vi.fn(async () => []),
-  cargarPuntosActivos: vi.fn(async () => [{ id: 'p1', nombre: 'Biblioteca (AF)' }]),
+  cargarPuntosDisponibles: vi.fn(async () => [{ id: 'p1', nombre: 'Biblioteca (AF)' }]),
   misStrikes: vi.fn(async () => 0),
   cargarListas: vi.fn(async () => ({
     seBusca: [

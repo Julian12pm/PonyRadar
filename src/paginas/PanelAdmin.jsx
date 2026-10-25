@@ -264,6 +264,12 @@ function PuntoSeguro({ punto, perfil, onCambio }) {
         </button>
       </div>
 
+      {punto.activo && punto.personal.length === 0 && (
+        <p role="status" className="aviso-cuenta mt-2 text-sm">
+          Nadie atiende este punto: no aparece como opción para dejar objetos hasta que asignes a
+          alguien.
+        </p>
+      )}
       <p className="mt-2 font-bold">Personal</p>
       {punto.personal.length === 0 && <p className="text-sm text-tinta/70">Nadie asignado.</p>}
       <ul className="mt-1 grid gap-1">

@@ -110,6 +110,7 @@ Las migraciones están numeradas en `supabase/migrations/` y se aplican en orden
 | `0006_reclamos_y_entrega.sql`      | Es mío, Lo encontré, aceptar/rechazar/impostor, clave, contacto y avisos            |
 | `0007_puntos_seguros_y_reglas.sql` | Puntos seguros, strikes y suspensión, caducidad (pg_cron), renovar, no reclamado    |
 | `0008_paneles.sql`                 | Funciones del admin: roles, personal de puntos seguros, quitar strikes, desbloquear |
+| `0009_puntos_con_personal.sql`     | Solo se dejan objetos en puntos seguros activos y con personal                      |
 
 `supabase/seed.sql` agrega los datos de demo (semestre vigente y el punto seguro de la Biblioteca).
 
@@ -159,7 +160,7 @@ Todo pasa en funciones RPC de `0006_reclamos_y_entrega.sql`; la app solo las lla
 
 Todo lo aplica el servidor (`0007_puntos_seguros_y_reglas.sql`); la app lo muestra (`src/lib/reglas.js`).
 
-- **Punto seguro:** quien encontró elige "Dejar en un punto seguro" → `en_camino`. El personal confirma la recepción → `en_resguardo` y quien lo encontró queda deslindado. Si en 24 h nadie confirma, se le avisa (una vez) y sigue `en_camino`; solo el admin puede regresarlo a `activo`.
+- **Punto seguro:** quien encontró elige "Dejar en un punto seguro" (solo aparecen los activos que tienen personal; el servidor lo vuelve a revisar) → `en_camino`. El personal confirma la recepción → `en_resguardo` y quien lo encontró queda deslindado. Si en 24 h nadie confirma, se le avisa (una vez) y sigue `en_camino`; solo el admin puede regresarlo a `activo`.
 - **Reclamar en resguardo:** el dueño pulsa "Es mío" desde la lista "En resguardo". Responde y escribe la clave el personal del punto seguro; el dueño ve dónde recogerlo (sin correo personal).
 - **Strikes** (solo los del semestre vigente que el admin no haya quitado): 1–2 aviso, 3 suspensión de 7 días, 4 de 30 días, 5+ bloqueo. Suspendido = ve el mapa, no publica ni reclama. "Mis casos" muestra cuántos tiene y qué pasa con el siguiente.
 - **Caducidad** (tarea de pg_cron cada 10 minutos): `activo` → `caducado` a las 72 h; una aceptación sin entrega en 72 h se cancela sin strike. Un pin verde vencido pide llevarlo a un punto seguro.
