@@ -22,7 +22,12 @@ import { useAccion } from '../lib/useAccion.js'
 import Contacto from './Contacto.jsx'
 
 /** Quien encontró compara la respuesta del reclamante con su dato ciego y decide. */
-export function RevisarSolicitud({ solicitud, datoCiego, onCambio }) {
+export function RevisarSolicitud({
+  solicitud,
+  datoCiego,
+  etiquetaDato = 'Tu dato ciego',
+  onCambio,
+}) {
   const [confirmarImpostor, setConfirmarImpostor] = useState(false)
   const { ocupado, error, correr } = useAccion(onCambio)
   const decidir = (decision) => correr(() => responderSolicitud(solicitud.id, decision))
@@ -33,7 +38,7 @@ export function RevisarSolicitud({ solicitud, datoCiego, onCambio }) {
       <p className="text-lg leading-snug font-bold">“{solicitud.respuesta}”</p>
       {datoCiego && (
         <p className="mt-1 text-sm">
-          Tu dato ciego: <strong>{datoCiego}</strong>
+          {etiquetaDato}: <strong>{datoCiego}</strong>
         </p>
       )}
       {confirmarImpostor ? (

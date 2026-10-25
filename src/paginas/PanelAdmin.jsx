@@ -128,7 +128,7 @@ function DetalleUsuario({ usuario, soyYo, onCambio }) {
             disabled={ocupado}
             onClick={() => correr(() => desbloquear(usuario.id))}
           >
-            Desbloquear cuenta
+            {usuario.bloqueado ? 'Desbloquear cuenta' : 'Levantar suspensión'}
           </button>
         </div>
       )}

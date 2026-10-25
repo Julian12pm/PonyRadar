@@ -84,7 +84,13 @@ function EnResguardo({ pin, dato, semestres, solicitudes, onCambio }) {
           </p>
           <ul className="mt-1.5 grid gap-2">
             {pendientes.map((s) => (
-              <RevisarSolicitud key={s.id} solicitud={s} datoCiego={dato} onCambio={onCambio} />
+              <RevisarSolicitud
+                key={s.id}
+                solicitud={s}
+                datoCiego={dato}
+                etiquetaDato="Dato ciego"
+                onCambio={onCambio}
+              />
             ))}
           </ul>
         </>
