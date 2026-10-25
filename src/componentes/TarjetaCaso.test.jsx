@@ -173,6 +173,24 @@ describe('TarjetaCaso: Fase 4', () => {
     expect(casos.renovarPin).toHaveBeenCalledWith('r1')
   })
 
+  it('en resguardo, quien lo encontró ya no ve solicitudes ni el contacto', () => {
+    render(
+      <TarjetaCaso
+        caso={{
+          papel: 'encontre',
+          pin: { ...pin, estado: 'en_resguardo' },
+          solicitudes: [solicitud({ id: 's1', estado: 'aceptada' }), solicitud({ id: 's2' })],
+          punto: 'Biblioteca (AF)',
+        }}
+        puntos={puntos}
+      />,
+    )
+    expect(screen.getByText(/ya no es tu responsabilidad/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aceptar' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Clave que te dicta el dueño')).not.toBeInTheDocument()
+    expect(casos.contactoDelCaso).not.toHaveBeenCalled()
+  })
+
   it('en resguardo, el dueño aceptado ve dónde recogerlo (sin Teams)', async () => {
     casos.contactoDelCaso.mockResolvedValueOnce({
       nombre: 'Biblioteca (AF)',

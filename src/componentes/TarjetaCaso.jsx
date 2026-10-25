@@ -268,9 +268,10 @@ function Renovar({ pin, onCambio }) {
 export default function TarjetaCaso({ caso, puntos = [], onCambio, onVerPin }) {
   const { pin, papel } = caso
   const accion = accionPendiente(caso)
-  const enEntrega = papel === 'encontre' ? solicitudEnEntrega(caso) : null
+  // Solo cuando le toca a quien lo encontró: en un punto seguro las atiende su personal
+  const enEntrega = accion === 'entregar' ? solicitudEnEntrega(caso) : null
   const pendientes =
-    papel === 'encontre' ? caso.solicitudes.filter((s) => s.estado === 'pendiente') : []
+    accion === 'responder' ? caso.solicitudes.filter((s) => s.estado === 'pendiente') : []
   const aceptadoComoDueno = papel === 'reclame' && accion === 'clave'
   // Puede llevarlo a un punto seguro si sigue con él y nadie lo está reclamando
   const puedeLlevar =
