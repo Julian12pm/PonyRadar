@@ -18,31 +18,11 @@ import {
 } from '../lib/casos.js'
 import { enlaceFoto, leerDatoCiego } from '../lib/pines.js'
 import { haceCuanto } from '../lib/tiempo.js'
+import { useAccion } from '../lib/useAccion.js'
 import Contacto from './Contacto.jsx'
 
-/** Corre una acción del servidor mostrando "ocupado" y el error, si lo hay. */
-function useAccion(alTerminar) {
-  const [ocupado, setOcupado] = useState(false)
-  const [error, setError] = useState(null)
-  const correr = async (accion) => {
-    setOcupado(true)
-    setError(null)
-    try {
-      const resultado = await accion()
-      alTerminar?.()
-      return resultado
-    } catch (e) {
-      setError(e.message)
-      return undefined
-    } finally {
-      setOcupado(false)
-    }
-  }
-  return { ocupado, error, correr }
-}
-
 /** Quien encontró compara la respuesta del reclamante con su dato ciego y decide. */
-function RevisarSolicitud({ solicitud, datoCiego, onCambio }) {
+export function RevisarSolicitud({ solicitud, datoCiego, onCambio }) {
   const [confirmarImpostor, setConfirmarImpostor] = useState(false)
   const { ocupado, error, correr } = useAccion(onCambio)
   const decidir = (decision) => correr(() => responderSolicitud(solicitud.id, decision))
@@ -113,7 +93,7 @@ function RevisarSolicitud({ solicitud, datoCiego, onCambio }) {
 }
 
 /** Quien tiene el objeto escribe la clave que el dueño le dicta en persona. */
-function EscribirClave({ solicitud, onCambio }) {
+export function EscribirClave({ solicitud, onCambio }) {
   const [clave, setClave] = useState('')
   const [resultado, setResultado] = useState(null)
   const { ocupado, error, correr } = useAccion()
