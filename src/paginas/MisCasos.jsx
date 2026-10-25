@@ -11,6 +11,7 @@ import {
   misStrikes,
   textoAviso,
 } from '../lib/casos.js'
+import { veaPanelPunto } from '../lib/paneles.js'
 import { mensajeStrikes } from '../lib/reglas.js'
 import { haceCuanto } from '../lib/tiempo.js'
 
@@ -70,7 +71,12 @@ export default function MisCasos({ perfil, avisos }) {
   const abrirAviso = (aviso) => {
     if (!aviso.pinId) return
     if (['lo_encontraron', 'coincidencia'].includes(aviso.tipo)) verPin(aviso.pinId)
-    else document.getElementById(`caso-${aviso.pinId}`)?.scrollIntoView({ behavior: 'smooth' })
+    else {
+      const caso = document.getElementById(`caso-${aviso.pinId}`)
+      // Un reclamo a un objeto en resguardo no es un caso propio: lo atiende el panel del punto
+      if (caso) caso.scrollIntoView({ behavior: 'smooth' })
+      else if (veaPanelPunto(perfil)) navegar('/punto')
+    }
   }
 
   return (

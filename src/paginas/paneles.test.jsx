@@ -1,0 +1,154 @@
+import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
+
+vi.mock('../lib/supabase.js', () => ({ configurado: true, supabase: {} }))
+vi.mock('../lib/casos.js', async (original) => ({
+  ...(await original()),
+  contactoDelCaso: vi.fn(async () => ({
+    nombre: 'Beto',
+    correo: 'beto@morelia.tecnm.mx',
+    papel: 'dueno',
+  })),
+  responderSolicitud: vi.fn(async () => null),
+}))
+vi.mock('../lib/paneles.js', async (original) => ({
+  ...(await original()),
+  buscarPerfiles: vi.fn(async () => [
+    { id: 'yo', correo: 'l23121115+admin@morelia.tecnm.mx', rol: 'admin', bloqueado: false },
+    { id: 'c', correo: 'carla@morelia.tecnm.mx', rol: 'comunidad', bloqueado: true },
+  ]),
+  cargarStrikes: vi.fn(async () => [
+    {
+      id: 'k1',
+      creado: '2026-10-20T12:00:00Z',
+      quitado: null,
+      respuesta: 'Es rojo',
+      objeto: 'Termo',
+    },
+  ]),
+  strikesVigentes: vi.fn(async () => 1),
+  cambiarRol: vi.fn(async () => null),
+  quitarStrike: vi.fn(async () => null),
+  desbloquear: vi.fn(async () => null),
+  cargarPuntosAdmin: vi.fn(async () => [
+    { id: 'p1', nombre: 'Biblioteca (AF)', zona_id: 'edificio-AF', activo: true, personal: [] },
+  ]),
+  asignarPersonal: vi.fn(async () => null),
+  cargarPanelPunto: vi.fn(),
+  confirmarRecepcion: vi.fn(async () => null),
+}))
+
+const paneles = await import('../lib/paneles.js')
+const casos = await import('../lib/casos.js')
+const { default: PanelAdmin } = await import('./PanelAdmin.jsx')
+const { default: PanelPunto } = await import('./PanelPunto.jsx')
+
+const admin = { id: 'yo', correo: 'l23121115+admin@morelia.tecnm.mx', rol: 'admin' }
+const en = (ruta, elemento) =>
+  render(<MemoryRouter initialEntries={[ruta]}>{elemento}</MemoryRouter>)
+
+beforeEach(() => vi.clearAllMocks())
+
+describe('Panel de admin', () => {
+  it('solo lo abre un admin', () => {
+    en('/admin', <PanelAdmin perfil={{ id: 'a', rol: 'punto_seguro' }} />)
+    expect(screen.getByText('Esta pantalla es solo para el admin.')).toBeInTheDocument()
+    expect(paneles.buscarPerfiles).not.toHaveBeenCalled()
+  })
+
+  it('el admin no puede quitarse su propio rol', async () => {
+    en('/admin', <PanelAdmin perfil={admin} />)
+    fireEvent.click(
+      await screen.findByRole('button', { name: /l23121115\+admin@morelia\.tecnm\.mx/ }),
+    )
+    expect(screen.getByLabelText('Rol')).toBeDisabled()
+    expect(screen.getByText('No puedes quitarte el rol de admin a ti mismo.')).toBeInTheDocument()
+  })
+
+  it('cambia el rol de otra persona, quita strikes y desbloquea', async () => {
+    en('/admin', <PanelAdmin perfil={admin} />)
+    fireEvent.click(await screen.findByRole('button', { name: /carla@morelia\.tecnm\.mx/ }))
+    fireEvent.change(screen.getByLabelText('Rol'), { target: { value: 'punto_seguro' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(paneles.cambiarRol).toHaveBeenCalledWith('c', 'punto_seguro'))
+
+    expect(await screen.findByText(/Reclamó "Termo"/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar' }))
+    await waitFor(() => expect(paneles.quitarStrike).toHaveBeenCalledWith('k1'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Desbloquear cuenta' }))
+    await waitFor(() => expect(paneles.desbloquear).toHaveBeenCalledWith('c'))
+  })
+
+  it('el admin se asigna a sí mismo como personal de la Biblioteca', async () => {
+    en('/admin?vista=puntos', <PanelAdmin perfil={admin} />)
+    const punto = (await screen.findByRole('heading', { name: 'Biblioteca (AF)' })).closest('li')
+    fireEvent.click(within(punto).getByRole('button', { name: 'Asignarme a mí' }))
+    await waitFor(() =>
+      expect(paneles.asignarPersonal).toHaveBeenCalledWith(
+        'p1',
+        'l23121115+admin@morelia.tecnm.mx',
+      ),
+    )
+  })
+})
+
+describe('Panel de punto seguro', () => {
+  const objeto = (cambios) => ({
+    id: 'v1',
+    tipo: 'verde',
+    categoria: 'termos',
+    titulo: 'Termo azul',
+    zonaId: 'edificio-K',
+    creado: '2026-10-24T12:00:00Z',
+    ...cambios,
+  })
+
+  it('sin asignación lo dice (y al admin le indica dónde asignarse)', async () => {
+    paneles.cargarPanelPunto.mockResolvedValue({
+      puntos: [],
+      objetos: [],
+      solicitudes: [],
+      datos: {},
+      semestres: [],
+    })
+    en('/punto', <PanelPunto perfil={admin} />)
+    expect(await screen.findByText('No atiendes ningún punto seguro.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ir al panel de admin' })).toBeInTheDocument()
+  })
+
+  it('confirma la recepción y revisa un reclamo contra el dato ciego', async () => {
+    paneles.cargarPanelPunto.mockResolvedValue({
+      puntos: [{ id: 'p1', nombre: 'Biblioteca (AF)' }],
+      objetos: [
+        objeto({
+          id: 'c1',
+          titulo: 'Sudadera',
+          estado: 'en_camino',
+          enCaminoDesde: new Date().toISOString(),
+        }),
+        objeto({ estado: 'en_resguardo', enResguardoDesde: '2026-10-24T12:00:00Z' }),
+      ],
+      solicitudes: [
+        {
+          id: 's1',
+          pinId: 'v1',
+          estado: 'pendiente',
+          respuesta: 'Tiene una calcomanía de Pumas',
+          intentos: 0,
+        },
+      ],
+      datos: { v1: 'Calcomanía de Pumas abajo' },
+      semestres: [],
+    })
+    en('/punto', <PanelPunto perfil={{ id: 'pepe', rol: 'punto_seguro' }} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Ya lo recibí' }))
+    await waitFor(() => expect(paneles.confirmarRecepcion).toHaveBeenCalledWith('c1'))
+
+    expect(screen.getByText('“Tiene una calcomanía de Pumas”')).toBeInTheDocument()
+    expect(screen.getByText('Calcomanía de Pumas abajo')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Aceptar' }))
+    await waitFor(() => expect(casos.responderSolicitud).toHaveBeenCalledWith('s1', 'aceptar'))
+  })
+})

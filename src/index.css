@@ -185,6 +185,15 @@ body {
   .pestanas {
     @apply grid grid-cols-2 gap-1 rounded-full bg-[#eef3f6] p-1;
   }
+  .pestanas-4 {
+    @apply grid-cols-2 sm:grid-cols-4;
+  }
+  .pestanas-4 .pestana {
+    @apply text-[15px];
+  }
+  .chip-panel {
+    @apply bg-tinta text-white;
+  }
   .pestana {
     @apply flex items-center justify-center gap-1.5 rounded-full px-2 pt-1 pb-0.5 font-bold;
   }

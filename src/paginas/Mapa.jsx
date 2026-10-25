@@ -12,6 +12,7 @@ import TarjetaPin from '../componentes/TarjetaPin.jsx'
 import { MENSAJE_SIN_CONEXION, esErrorDeRed } from '../lib/conexion.js'
 import { filtrarPines } from '../lib/filtros.js'
 import { crearPin } from '../lib/pines.js'
+import { esAdmin, veaPanelPunto } from '../lib/paneles.js'
 import { motivoSuspension } from '../lib/reglas.js'
 import { cerrarSesion, puedePublicar } from '../lib/sesion.js'
 import { useDatosDelMapa } from '../lib/useDatosDelMapa.js'
@@ -111,6 +112,15 @@ export default function Mapa({ perfil, avisos = SIN_AVISOS }) {
             <button type="button" className="chip" onClick={() => navegar('/listas')}>
               Listas
             </button>
+            {veaPanelPunto(perfil) && (
+              <button
+                type="button"
+                className="chip chip-panel"
+                onClick={() => navegar(esAdmin(perfil) ? '/admin' : '/punto')}
+              >
+                Panel
+              </button>
+            )}
             <button type="button" className="chip relative" onClick={() => navegar('/casos')}>
               Mis casos
               {avisos.noLeidos > 0 && (

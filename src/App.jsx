@@ -1,5 +1,6 @@
 // Punto de entrada de las pantallas: sin sesión muestra el inicio de sesión; con sesión,
-// el mapa ("/"), "Mis casos" ("/casos") y las listas "Se busca" / "En resguardo" ("/listas"). Los avisos se escuchan aquí para que el contador
+// el mapa ("/"), "Mis casos" ("/casos"), las listas "Se busca" / "En resguardo" ("/listas")
+// y los paneles del punto seguro ("/punto") y del admin ("/admin"). Los avisos se escuchan aquí para que el contador
 // se vea en las dos pantallas.
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { configurado } from './lib/supabase.js'
@@ -9,6 +10,8 @@ import Listas from './paginas/Listas.jsx'
 import Login from './paginas/Login.jsx'
 import Mapa from './paginas/Mapa.jsx'
 import MisCasos from './paginas/MisCasos.jsx'
+import PanelAdmin from './paginas/PanelAdmin.jsx'
+import PanelPunto from './paginas/PanelPunto.jsx'
 
 function Pantallas({ sesion, perfil }) {
   const avisos = useAvisos(sesion.user?.id)
@@ -17,6 +20,8 @@ function Pantallas({ sesion, perfil }) {
       <Route path="/" element={<Mapa perfil={perfil} avisos={avisos} />} />
       <Route path="/casos" element={<MisCasos perfil={perfil} avisos={avisos} />} />
       <Route path="/listas" element={<Listas perfil={perfil} />} />
+      <Route path="/punto" element={<PanelPunto perfil={perfil} avisos={avisos} />} />
+      <Route path="/admin" element={<PanelAdmin perfil={perfil} />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

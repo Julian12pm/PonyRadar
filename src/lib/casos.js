@@ -5,7 +5,7 @@ import { debeLlevarseAPuntoSeguro, diasEnSeBusca, enSeBusca, puedeRenovar } from
 import { supabase } from './supabase.js'
 
 // Nunca "*": la columna clave_hash no se puede leer (y pedirla da error de permisos)
-const COLUMNAS_SOLICITUD =
+export const COLUMNAS_SOLICITUD =
   'id, pin_id, solicitante_id, respuesta, estado, creado_en, resuelta_en, intentos_clave, aceptada_en, entregada_en, clave_generada_en'
 
 export const MAXIMO_INTENTOS = 5

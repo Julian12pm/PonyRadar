@@ -10,6 +10,18 @@ describe('esCorreoInstitucional', () => {
     expect(esCorreoInstitucional('  Juan.Perez@MORELIA.TECNM.MX ')).toBe(true)
   })
 
+  it('acepta alias con "+" antes de la @ (Microsoft 365 los entrega en la misma bandeja)', () => {
+    expect(esCorreoInstitucional('l23121115+admin@morelia.tecnm.mx')).toBe(true)
+    expect(esCorreoInstitucional('L23121115+Punto.Seguro@Morelia.TecNM.mx')).toBe(true)
+  })
+
+  it('con "+" sigue exigiendo @morelia.tecnm.mx al final', () => {
+    expect(esCorreoInstitucional('l23121115+admin@gmail.com')).toBe(false)
+    expect(esCorreoInstitucional('l23121115+admin@morelia.tecnm.mx.evil.com')).toBe(false)
+    expect(esCorreoInstitucional('l23121115+@morelia.tecnm.mx@gmail.com')).toBe(false)
+    expect(esCorreoInstitucional('+admin@gmail.com')).toBe(false)
+  })
+
   it('rechaza otros dominios', () => {
     expect(esCorreoInstitucional('alguien@gmail.com')).toBe(false)
     expect(esCorreoInstitucional('alguien@tecnm.mx')).toBe(false)
