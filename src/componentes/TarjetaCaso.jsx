@@ -264,8 +264,7 @@ export default function TarjetaCaso({ caso, puntos = [], onCambio, onVerPin }) {
     ['activo', 'caducado'].includes(pin.estado) &&
     !caso.solicitudes.some(
       (s) => s.estado === 'pendiente' || (s.estado === 'aceptada' && !s.entregada),
-    ) &&
-    puntos.length > 0
+    )
   const [privado, setPrivado] = useState({ dato: null, foto: null })
 
   // Dato ciego para comparar (quien encontró) o foto nítida (dueño aceptado)
@@ -337,7 +336,13 @@ export default function TarjetaCaso({ caso, puntos = [], onCambio, onVerPin }) {
         </>
       )}
 
-      {puedeLlevar && (
+      {puedeLlevar && puntos.length === 0 && accion === 'llevar' && (
+        <p className="mt-2 text-sm font-semibold">
+          Ahora no hay puntos seguros atendidos. Consérvalo un poco más o vuelve a revisar más
+          tarde.
+        </p>
+      )}
+      {puedeLlevar && puntos.length > 0 && (
         <LlevarAPunto
           pin={pin}
           puntos={puntos}

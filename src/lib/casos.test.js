@@ -17,6 +17,7 @@ const {
   accionPendiente,
   armarCasos,
   casoCerrado,
+  cargarPuntosDisponibles,
   contactoDelCaso,
   filaASolicitud,
   loEncontre,
@@ -84,6 +85,15 @@ describe('acciones del servidor', () => {
       error: null,
     }
     expect(await contactoDelCaso('s1')).toMatchObject({ nombre: 'Ana' })
+  })
+
+  it('los puntos para dejar un objeto los decide el servidor (activos y con personal)', async () => {
+    simulado.respuestas.puntos_disponibles = {
+      data: [{ id: 'p1', nombre: 'Biblioteca (AF)', zona_id: 'edificio-AF' }],
+      error: null,
+    }
+    expect(await cargarPuntosDisponibles()).toHaveLength(1)
+    expect(simulado.llamadas[0].nombre).toBe('puntos_disponibles')
   })
 
   it('"Lo encontré" manda el dato ciego', async () => {

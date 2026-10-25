@@ -84,6 +84,8 @@ describe('Panel de admin', () => {
   it('el admin se asigna a sí mismo como personal de la Biblioteca', async () => {
     en('/admin?vista=puntos', <PanelAdmin perfil={admin} />)
     const punto = (await screen.findByRole('heading', { name: 'Biblioteca (AF)' })).closest('li')
+    // Activo y sin personal: se avisa que no aparece como opción para dejar objetos
+    expect(within(punto).getByText(/Nadie atiende este punto/)).toBeInTheDocument()
     fireEvent.click(within(punto).getByRole('button', { name: 'Asignarme a mí' }))
     await waitFor(() =>
       expect(paneles.asignarPersonal).toHaveBeenCalledWith(

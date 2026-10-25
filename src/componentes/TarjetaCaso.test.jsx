@@ -138,6 +138,13 @@ describe('TarjetaCaso: Fase 4', () => {
     expect(casos.dejarEnPuntoSeguro).toHaveBeenCalledWith('v1', 'p2')
   })
 
+  it('si ningún punto seguro está atendido, lo dice en lugar de ofrecer la lista', () => {
+    const vencido = { ...pin, estado: 'caducado', expira: '2026-01-01T00:00:00Z' }
+    render(<TarjetaCaso caso={{ papel: 'encontre', pin: vencido, solicitudes: [] }} puntos={[]} />)
+    expect(screen.getByText(/no hay puntos seguros atendidos/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Punto seguro')).not.toBeInTheDocument()
+  })
+
   it('un pin verde activo sin reclamos ofrece llevarlo, sin abrir el formulario', () => {
     const activo = { ...pin, estado: 'activo', expira: '2099-01-01T00:00:00Z' }
     render(

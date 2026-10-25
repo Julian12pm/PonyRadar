@@ -346,13 +346,12 @@ export function escucharAvisos(yo, alLlegar) {
 
 // ─── Listas "Se busca" y "En resguardo" ───
 
-/** Puntos seguros activos (para elegir dónde dejar un objeto). */
-export async function cargarPuntosActivos() {
-  const { data, error } = await supabase
-    .from('puntos_seguros')
-    .select('id, nombre')
-    .eq('activo', true)
-    .order('nombre')
+/**
+ * Puntos seguros donde se puede dejar un objeto: activos y con al menos una persona que los
+ * atienda (lo calcula el servidor, porque la comunidad no puede ver quién es el personal).
+ */
+export async function cargarPuntosDisponibles() {
+  const { data, error } = await supabase.rpc('puntos_disponibles')
   if (error) throw errorDe(error)
   return data
 }
