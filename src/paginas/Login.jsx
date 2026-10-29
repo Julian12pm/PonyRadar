@@ -1,4 +1,6 @@
 // Inicio de sesión en dos pasos: correo institucional → código de 6 dígitos que llega por correo.
+// Si el servidor tarda en mandar el correo (504), se pasa igual a escribir el código: casi
+// siempre sí llega. "Ya tengo un código" lleva directo a escribirlo sin pedir otro.
 import { useState } from 'react'
 import { esCorreoInstitucional } from '../lib/correo.js'
 import { enviarCodigo, verificarCodigo } from '../lib/sesion.js'
@@ -9,6 +11,8 @@ export default function Login() {
   const [codigo, setCodigo] = useState('')
   const [error, setError] = useState('')
   const [ocupado, setOcupado] = useState(false)
+  // Texto arriba del campo del código: 'enviado' | 'lento' | 'ya-tengo'
+  const [envio, setEnvio] = useState('enviado')
 
   const correoValido = esCorreoInstitucional(correo)
 
@@ -21,13 +25,23 @@ export default function Login() {
     }
     setOcupado(true)
     try {
-      await enviarCodigo(correo)
+      setEnvio(await enviarCodigo(correo))
       setPaso('codigo')
     } catch (err) {
       setError(err.message)
     } finally {
       setOcupado(false)
     }
+  }
+
+  const yaTengoCodigo = () => {
+    setError('')
+    if (!correoValido) {
+      setError('Escribe primero tu correo institucional @morelia.tecnm.mx')
+      return
+    }
+    setEnvio('ya-tengo')
+    setPaso('codigo')
   }
 
   const entrar = async (e) => {
@@ -72,11 +86,24 @@ export default function Login() {
             <button type="submit" className="boton boton-verde" disabled={ocupado}>
               {ocupado ? 'Enviando…' : 'Enviarme un código'}
             </button>
+            <button
+              type="button"
+              className="text-sm font-semibold underline"
+              disabled={ocupado}
+              onClick={yaTengoCodigo}
+            >
+              Ya tengo un código
+            </button>
           </form>
         ) : (
           <form className="mt-5 grid gap-3" onSubmit={entrar}>
-            <p className="text-sm">
-              Te enviamos un código de 6 dígitos a <strong>{correo.trim().toLowerCase()}</strong>.
+            <p className="text-sm" role="status">
+              {envio === 'ya-tengo'
+                ? 'Escribe el código de 6 dígitos que te llegó a '
+                : 'Te enviamos un código de 6 dígitos a '}
+              <strong className="break-all">{correo.trim().toLowerCase()}</strong>.
+              {envio === 'lento' &&
+                ' Puede tardar un minuto en llegar; revisa también la carpeta de correo no deseado.'}
             </p>
             <label className="campo">
               <span>Código</span>

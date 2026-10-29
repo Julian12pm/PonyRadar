@@ -4,7 +4,22 @@ import { guardarLocal, leerLocal } from './conexion.js'
 import { esCorreoInstitucional } from './correo.js'
 import { supabase } from './supabase.js'
 
-/** Envía el código de 6 dígitos al correo. Crea la cuenta si es la primera vez. */
+/**
+ * ¿Supabase se tardó en contestar (504 / 408 / "timeout")? Con el SMTP del Tec, mandar el
+ * correo a veces tarda más de 10 s y el servidor responde 504 aunque el correo sí sale.
+ * No cuenta "sin conexión" (status 0): ahí el correo seguro no se pidió.
+ */
+export function esTiempoAgotado(error) {
+  if (!error) return false
+  if ([408, 504].includes(Number(error.status))) return true
+  return /timeout|timed out|gateway/i.test(`${error.name ?? ''} ${error.message ?? ''}`)
+}
+
+/**
+ * Envía el código de 6 dígitos al correo. Crea la cuenta si es la primera vez.
+ * @returns {Promise<'enviado' | 'lento'>} 'lento' si el servidor tardó: el correo
+ *   probablemente sí salió, pero puede tardar en llegar.
+ */
 export async function enviarCodigo(correo) {
   const limpio = correo.trim().toLowerCase()
   if (!esCorreoInstitucional(limpio)) {
@@ -14,7 +29,9 @@ export async function enviarCodigo(correo) {
     email: limpio,
     options: { shouldCreateUser: true },
   })
+  if (esTiempoAgotado(error)) return 'lento'
   if (error) throw new Error(traducirErrorAuth(error))
+  return 'enviado'
 }
 
 /** Verifica el código que llegó por correo e inicia la sesión. */
