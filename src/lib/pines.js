@@ -10,7 +10,7 @@ export function errorDe(error) {
 export const ESTADOS_EN_MAPA = ['activo', 'con_solicitud', 'aceptado']
 
 export const COLUMNAS =
-  'id, autor_id, tipo, categoria, titulo, descripcion, zona_id, piso, x, y, estado, creado_en, expira_en, renovado, foto_publica, tiene_foto_nitida, punto_seguro_id'
+  'id, autor_id, tipo, categoria, titulo, descripcion, zona_id, piso, x, y, estado, creado_en, expira_en, renovado, foto_publica, tiene_foto_nitida, punto_seguro_id, pin_vinculado_id, encontrado'
 
 /** Convierte una fila de la tabla "pines" al formato que usa la app. */
 export function filaAPin(fila) {
@@ -31,6 +31,9 @@ export function filaAPin(fila) {
     tieneFotoNitida: Boolean(fila.tiene_foto_nitida),
     renovado: Boolean(fila.renovado),
     puntoSeguroId: fila.punto_seguro_id ?? null,
+    // "Lo encontré": el verde apunta a su rojo; el rojo queda "encontrado" mientras siga en curso
+    pinVinculadoId: fila.pin_vinculado_id ?? null,
+    encontrado: Boolean(fila.encontrado),
   }
 }
 
@@ -39,6 +42,8 @@ export function filaAPin(fila) {
  * solicitud pendiente o aceptada no caducan (especificación, sección 7), así que siguen visibles.
  */
 export function seVeEnMapa(pin, ahora = new Date()) {
+  // Un rojo que alguien ya encontró no se muestra: en su lugar está el verde vinculado
+  if (pin.tipo === 'rojo' && pin.encontrado) return false
   if (pin.estado === 'activo') return new Date(pin.expira) > ahora
   return ESTADOS_EN_MAPA.includes(pin.estado)
 }
@@ -60,6 +65,7 @@ export async function cargarPines() {
     .or(
       `estado.in.(con_solicitud,aceptado),and(estado.eq.activo,expira_en.gt."${new Date().toISOString()}")`,
     )
+    .eq('encontrado', false)
   if (error) throw errorDe(error)
   return data.map(filaAPin)
 }
