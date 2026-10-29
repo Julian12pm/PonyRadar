@@ -41,6 +41,7 @@ vi.mock('./lib/casos.js', async (original) => ({
   escucharAvisos: vi.fn(() => () => {}),
   marcarAvisosLeidos: vi.fn(async () => {}),
   miSolicitudAlPin: vi.fn(async () => null),
+  soyAutorDelPin: vi.fn(async () => false),
   solicitarPin: vi.fn(async () => 'sol-1'),
   loEncontre: vi.fn(async () => 'verde-1'),
   cargarCasos: vi.fn(async () => []),

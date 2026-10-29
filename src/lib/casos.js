@@ -244,7 +244,7 @@ export async function cargarCasos(yo) {
   if (rojos.length) {
     const { data, error } = await supabase
       .from('pines')
-      .select(`${COLUMNAS}, pin_vinculado_id`)
+      .select(COLUMNAS)
       .in('pin_vinculado_id', rojos)
     if (error) throw errorDe(error)
     encontrados = data.map((f) => ({ ...filaAPin(f), vinculadoA: f.pin_vinculado_id }))
@@ -258,6 +258,17 @@ export async function cargarCasos(yo) {
     },
     yo,
   )
+}
+
+/** ¿Soy quien publicó ese pin? (para saber si un verde vinculado lo puedo reclamar yo) */
+export async function soyAutorDelPin(pinId, yo) {
+  const { data, error } = await supabase
+    .from('pines')
+    .select('autor_id')
+    .eq('id', pinId)
+    .maybeSingle()
+  if (error) throw errorDe(error)
+  return data?.autor_id === yo
 }
 
 /** Mi solicitud pendiente o aceptada a un pin (para no ofrecer "Es mío" dos veces). */
@@ -364,6 +375,7 @@ export async function cargarListas(ahora = new Date()) {
       .from('pines')
       .select(COLUMNAS)
       .eq('tipo', 'rojo')
+      .eq('encontrado', false) // ya lo encontraron: lo atiende su pin verde
       .in('estado', ['activo', 'caducado'])
       .lte('expira_en', ahora.toISOString())
       .gt('expira_en', hace30)
