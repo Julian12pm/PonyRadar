@@ -60,7 +60,8 @@ select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-1111111
 insert into g select 'verde2', public.lo_encontre((select v::uuid from g where k = 'rojo2'), '', '', 'Calcomanía')::text;
 insert into r (prueba, resultado) select 'verde vigente: rojo oculto (true) y con verde_en_curso', encontrado::text || ' / ' || (verde_en_curso = (select v::uuid from g where k = 'verde2')) from public.pines where id = (select v::uuid from g where k = 'rojo2');
 reset role;
-update public.pines set estado = 'caducado' where id = (select v::uuid from g where k = 'verde2');
+-- Como lo haría la tarea de pg_cron: caducado y con sus 72 h ya vencidas
+update public.pines set estado = 'caducado', expira_en = now() - interval '1 hour' where id = (select v::uuid from g where k = 'verde2');
 insert into r (prueba, resultado) select 'verde caducado: el rojo vuelve a mostrarse (false) con la nota (true)', encontrado::text || ' / ' || (verde_en_curso = (select v::uuid from g where k = 'verde2')) from public.pines where id = (select v::uuid from g where k = 'rojo2');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}', true);
