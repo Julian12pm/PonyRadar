@@ -116,8 +116,26 @@ async function simularSupabase(ctx, conSesion) {
       return json(
         url.includes('id=eq.yo')
           ? yo
-          : [yo, { ...yo, id: 'c', correo: 'l22120999@morelia.tecnm.mx', rol: 'comunidad' }],
+          : [
+              yo,
+              { ...yo, id: 'c', correo: 'l22120999@morelia.tecnm.mx', rol: 'comunidad' },
+              { ...yo, id: 's', correo: 'l23121064+sec@morelia.tecnm.mx', rol: 'comunidad' },
+            ],
       )
+    if (url.includes('/alias_permitidos'))
+      return json([{ correo: yo.correo, nota: 'Cuenta admin', creado_en: iso(-100) }])
+    if (url.includes('/moderacion'))
+      return json([
+        {
+          id: 1,
+          accion: 'eliminar_pin',
+          titulo: 'asdf',
+          tipo: 'rojo',
+          motivo: 'Título basura',
+          creado_en: iso(-5),
+          autor: { correo: 'l23121064@morelia.tecnm.mx' },
+        },
+      ])
     if (url.includes('/strikes'))
       return json([
         {
@@ -299,6 +317,11 @@ const PANTALLAS = [
     nombre: 'admin-usuarios',
     ruta: '/admin',
     listo: (p) => p.getByRole('button', { name: /l22120999/ }).waitFor(),
+  },
+  {
+    nombre: 'admin-pines',
+    ruta: '/admin?vista=pines',
+    listo: (p) => p.getByRole('heading', { name: 'Eliminados recientemente' }).waitFor(),
   },
   {
     nombre: 'admin-puntos',
