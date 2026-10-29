@@ -24,8 +24,10 @@ body {
 
 /* Piezas de interfaz con borde grueso y sombra sólida, como piezas de maqueta */
 @layer components {
+  /* Nunca más ancha que su contenedor; un correo largo se parte en vez de empujar la tarjeta */
   .tarjeta {
-    @apply rounded-[20px] border-[2.5px] border-tinta bg-white shadow-[0_4px_0_#2b3a4a22];
+    @apply max-w-full min-w-0 rounded-[20px] border-[2.5px] border-tinta bg-white shadow-[0_4px_0_#2b3a4a22];
+    overflow-wrap: anywhere;
   }
   .chips {
     scrollbar-width: none;
@@ -77,10 +79,15 @@ body {
   .campo {
     @apply grid gap-1 text-left text-sm font-semibold;
   }
+  .campo {
+    @apply min-w-0;
+  }
+  /* Ocupan el ancho de la tarjeta y pueden encogerse (sin min-width, un campo con letra grande
+     como el del código se salía de la tarjeta en celulares angostos) */
   .campo input,
   .campo select,
   .campo textarea {
-    @apply rounded-xl border-2 border-tinta/25 bg-white px-3 pt-2 pb-1.5 text-base font-normal focus:border-tinta focus:outline-none;
+    @apply box-border w-full max-w-full min-w-0 rounded-xl border-2 border-tinta/25 bg-white px-3 pt-2 pb-1.5 text-base font-normal focus:border-tinta focus:outline-none;
   }
   .etiqueta-tipo {
     @apply rounded-full px-2.5 pt-0.5 text-sm font-bold text-white;

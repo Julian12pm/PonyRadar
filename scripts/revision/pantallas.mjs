@@ -1,7 +1,7 @@
 // Revisión completa de pantallas con Playwright, con Supabase simulado (no toca la base real).
 // Recorre todas las pantallas en celular (390×844) y escritorio (1440×900), guarda capturas y
-// revisa en cada una: errores de JavaScript, desbordamiento horizontal, botones sin nombre e
-// imágenes sin texto alternativo.
+// revisa en cada una: errores de JavaScript, desbordamiento horizontal, elementos que se salen
+// de su tarjeta, botones sin nombre e imágenes sin texto alternativo.
 // Uso: npm run dev  y en otra terminal:  node scripts/revision/pantallas.mjs [url] [carpeta]
 import { mkdirSync } from 'node:fs'
 import { chromium } from 'playwright'
@@ -201,8 +201,27 @@ async function revisar(p) {
       const nombre = (b.getAttribute('aria-label') ?? b.textContent ?? '').trim()
       return !nombre && !b.getAttribute('aria-labelledby') && !b.title
     })
+    // Elementos que se salen por los lados de la tarjeta que los contiene
+    const fueraDeTarjeta = []
+    for (const tarjeta of visibles('.tarjeta')) {
+      const borde = tarjeta.getBoundingClientRect()
+      for (const hijo of tarjeta.querySelectorAll(
+        'input, select, textarea, button, a, p, h1, h2, label',
+      )) {
+        const r = hijo.getBoundingClientRect()
+        if (!r.width) continue
+        if (r.right > borde.right + 1 || r.left < borde.left - 1) {
+          const nombre =
+            hijo.getAttribute('aria-label') || hijo.textContent.trim().slice(0, 30) || hijo.tagName
+          fueraDeTarjeta.push(
+            `${hijo.tagName.toLowerCase()} "${nombre}" (${Math.round(r.right - borde.right)}px)`,
+          )
+        }
+      }
+    }
     return {
       desborde: document.documentElement.scrollWidth - window.innerWidth,
+      fueraDeTarjeta,
       botonesSinNombre: sinNombre.map((b) => b.outerHTML.slice(0, 80)),
       imagenesSinAlt: visibles('img')
         .filter((i) => !i.hasAttribute('alt'))
@@ -217,6 +236,18 @@ const PANTALLAS = [
     ruta: '/',
     sesion: false,
     listo: (p) => p.getByLabel('Correo institucional').waitFor(),
+  },
+  {
+    // Pantalla del código (correo ya enviado): se revisa también en celular angosto y tableta
+    nombre: 'login-codigo',
+    ruta: '/',
+    sesion: false,
+    anchos: [360, 390, 768],
+    listo: async (p) => {
+      await p.getByLabel('Correo institucional').fill('l23121115+admin@morelia.tecnm.mx')
+      await p.getByRole('button', { name: 'Enviarme un código' }).click()
+      await p.getByLabel('Código').waitFor()
+    },
   },
   {
     nombre: 'mapa',
@@ -286,13 +317,25 @@ const PANTALLAS = [
   },
 ]
 
+// Cada pantalla en celular y escritorio, salvo las que piden sus propios anchos
+const CORRIDAS = PANTALLAS.flatMap((pantalla) =>
+  pantalla.anchos
+    ? pantalla.anchos.map((ancho) => ({
+        pantalla,
+        dispositivo: `${ancho}px`,
+        ancho,
+        alto: ancho < 600 ? 800 : 1024,
+      }))
+    : [
+        { pantalla, dispositivo: 'celular', ancho: 390, alto: 844 },
+        { pantalla, dispositivo: 'escritorio', ancho: 1440, alto: 900 },
+      ],
+)
+
 const nav = await chromium.launch()
 const problemas = []
-for (const [dispositivo, ancho, alto] of [
-  ['celular', 390, 844],
-  ['escritorio', 1440, 900],
-]) {
-  for (const pantalla of PANTALLAS) {
+for (const { pantalla, dispositivo, ancho, alto } of CORRIDAS) {
+  {
     const ctx = await nav.newContext({
       viewport: { width: ancho, height: alto },
       deviceScaleFactor: 1,
@@ -313,6 +356,7 @@ for (const [dispositivo, ancho, alto] of [
       const mal = [
         ...errores.map((e) => `error JS: ${e}`),
         ...(r.desborde > 0 ? [`desborde horizontal de ${r.desborde}px`] : []),
+        ...r.fueraDeTarjeta.map((f) => `se sale de la tarjeta: ${f}`),
         ...r.botonesSinNombre.map((b) => `botón sin nombre: ${b}`),
         ...r.imagenesSinAlt.map((i) => `imagen sin alt: ${i}`),
       ]

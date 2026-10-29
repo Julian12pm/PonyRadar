@@ -44,9 +44,10 @@ export default function Login() {
   }
 
   return (
-    <main className="grid min-h-full place-items-center bg-fondo px-4 py-8">
+    // minmax(0, 1fr): la columna nunca es más ancha que la pantalla, aunque algo no quepa
+    <main className="grid min-h-full grid-cols-[minmax(0,1fr)] place-items-center bg-fondo px-4 py-8">
       <div className="tarjeta w-full max-w-sm px-5 pt-5 pb-6">
-        <h1 className="flex items-center gap-3 text-3xl font-extrabold">
+        <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-3xl font-extrabold [overflow-wrap:normal]">
           <img src="/favicon.svg" alt="" className="size-11 shrink-0" />
           PonyRadar
         </h1>
