@@ -52,14 +52,16 @@ select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-1111111
 select public.verificar_clave((select v::uuid from g where k = 'sol'), (select v from g where k = 'clave'));
 insert into r (prueba, resultado) select 'al entregar: rojo entregado y no "encontrado"', estado::text || ' / ' || encontrado from public.pines where id = (select v::uuid from g where k = 'rojo');
 
--- Otro rojo: mientras el verde siga en curso (aunque caduque) se bloquea; si queda
--- "no reclamado", se puede volver a marcar "Lo encontré"
+-- Otro rojo: si su verde caduca, el rojo vuelve a "Se busca" (con nota) pero sigue bloqueado
+-- para otro "Lo encontré" y solo su dueño reclama el verde; si queda "no reclamado", se libera
 select set_config('request.jwt.claims', '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}', true);
 insert into g select 'rojo2', public.crear_pin('rojo', 'termos', 'Termo', 'Azul', 'edificio-K', '', 2, 2, null)::text;
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 insert into g select 'verde2', public.lo_encontre((select v::uuid from g where k = 'rojo2'), '', '', 'Calcomanía')::text;
+insert into r (prueba, resultado) select 'verde vigente: rojo oculto (true) y con verde_en_curso', encontrado::text || ' / ' || (verde_en_curso = (select v::uuid from g where k = 'verde2')) from public.pines where id = (select v::uuid from g where k = 'rojo2');
 reset role;
 update public.pines set estado = 'caducado' where id = (select v::uuid from g where k = 'verde2');
+insert into r (prueba, resultado) select 'verde caducado: el rojo vuelve a mostrarse (false) con la nota (true)', encontrado::text || ' / ' || (verde_en_curso = (select v::uuid from g where k = 'verde2')) from public.pines where id = (select v::uuid from g where k = 'rojo2');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}', true);
 do $$ begin
@@ -67,9 +69,22 @@ do $$ begin
   insert into r (prueba, resultado) values ('verde caducado sigue en curso: se bloquea', 'NO');
 exception when others then insert into r (prueba, resultado) values ('verde caducado sigue en curso: se bloquea', 'sí: ' || sqlerrm);
 end $$;
+do $$ begin
+  perform public.solicitar_pin((select v::uuid from g where k = 'verde2'), 'Es mío');
+  insert into r (prueba, resultado) values ('el verde caducado tampoco lo reclama otra persona', 'NO');
+exception when others then insert into r (prueba, resultado) values ('el verde caducado tampoco lo reclama otra persona', 'sí: ' || sqlerrm);
+end $$;
+-- Beto (dueño del rojo) sí reclama el verde caducado
+select set_config('request.jwt.claims', '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}', true);
+insert into g select 'sol2', public.solicitar_pin((select v::uuid from g where k = 'verde2'), 'Calcomanía')::text;
+insert into r (prueba, resultado) select 'el dueño reclama el verde caducado: con_solicitud', estado::text from public.pines where id = (select v::uuid from g where k = 'verde2');
+insert into r (prueba, resultado) select 'mientras tanto el rojo se oculta otra vez (true)', encontrado::text from public.pines where id = (select v::uuid from g where k = 'rojo2');
+select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+select public.responder_solicitud((select v::uuid from g where k = 'sol2'), 'rechazar');
+insert into r (prueba, resultado) select 'si lo rechazan: verde caducado y rojo visible', (select estado::text from public.pines where id = (select v::uuid from g where k = 'verde2')) || ' / ' || encontrado from public.pines where id = (select v::uuid from g where k = 'rojo2');
 reset role;
 update public.pines set estado = 'no_reclamado' where id = (select v::uuid from g where k = 'verde2');
-insert into r (prueba, resultado) select 'verde no reclamado: el rojo deja de estar "encontrado" (false)', encontrado::text from public.pines where id = (select v::uuid from g where k = 'rojo2');
+insert into r (prueba, resultado) select 'verde no reclamado: el rojo queda libre (false / sin verde)', encontrado::text || ' / ' || coalesce(verde_en_curso::text, 'sin verde') from public.pines where id = (select v::uuid from g where k = 'rojo2');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}', true);
 insert into g select 'verde3', public.lo_encontre((select v::uuid from g where k = 'rojo2'), '', '', 'Otro dato')::text;

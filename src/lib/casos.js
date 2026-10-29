@@ -148,7 +148,8 @@ export function accionPendiente(caso, ahora = new Date()) {
     return s.estado === 'aceptada' && !s.entregada ? 'clave' : null
   }
   const activos = caso.encontrados?.filter((v) =>
-    ['activo', 'con_solicitud', 'en_resguardo'].includes(v.estado),
+    // Un verde caducado sigue con quien lo encontró: el dueño todavía lo puede reclamar
+    ['activo', 'con_solicitud', 'en_resguardo', 'caducado'].includes(v.estado),
   )
   if (['activo', 'caducado'].includes(caso.pin.estado) && activos?.length) return 'reclamar'
   if (puedeRenovar(caso.pin, ahora)) return 'renovar'
@@ -269,6 +270,17 @@ export async function soyAutorDelPin(pinId, yo) {
     .maybeSingle()
   if (error) throw errorDe(error)
   return data?.autor_id === yo
+}
+
+/** Un pin por su id (para abrir uno que no está en el mapa ni en las listas). */
+export async function cargarPin(pinId) {
+  const { data, error } = await supabase
+    .from('pines')
+    .select(COLUMNAS)
+    .eq('id', pinId)
+    .maybeSingle()
+  if (error) throw errorDe(error)
+  return data ? filaAPin(data) : null
 }
 
 /** Mi solicitud pendiente o aceptada a un pin (para no ofrecer "Es mío" dos veces). */

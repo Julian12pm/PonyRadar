@@ -63,8 +63,15 @@ export default function MisCasos({ perfil, avisos }) {
 
   const recargar = useCallback(() => setRecarga((n) => n + 1), [])
   // Un objeto en resguardo no está en el mapa: se abre en la lista "En resguardo"
+  // Un objeto en resguardo o un verde caducado no están en el mapa: se abren desde Listas
   const verPin = (id, estado) =>
-    navegar(estado === 'en_resguardo' ? `/listas?vista=resguardo&pin=${id}` : `/?pin=${id}`)
+    navegar(
+      estado === 'en_resguardo'
+        ? `/listas?vista=resguardo&pin=${id}`
+        : estado === 'caducado'
+          ? `/listas?pin=${id}`
+          : `/?pin=${id}`,
+    )
   const avisoStrikes = mensajeStrikes(strikes, perfil)
   // Los avisos de pines ajenos ("Lo encontré", coincidencia) abren el pin en el mapa;
   // los demás llevan a la tarjeta del caso en esta misma pantalla

@@ -1,18 +1,45 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- 0010 · "Lo encontré" una sola vez por pin rojo
 --   · Si un pin rojo ya tiene un pin verde vinculado "en curso" (cualquier estado menos
---     entregado o no reclamado), nadie más puede marcar "Lo encontré".
---   · Un pin verde vinculado solo lo puede reclamar ("Es mío") el dueño del pin rojo.
---   · pines.encontrado: el pin rojo tiene un verde vinculado en curso. El mapa y la lista
---     "Se busca" ocultan esos rojos para no mostrar el mismo objeto dos veces. Lo mantiene
---     al día un trigger; al entregarse, el rojo se cierra (ya lo hace verificar_clave).
+--     entregado o no reclamado; un verde caducado sigue en curso), nadie más puede marcar
+--     "Lo encontré".
+--   · Un pin verde vinculado solo lo puede reclamar ("Es mío") el dueño del pin rojo, aunque
+--     el verde haya caducado (el objeto sigue con quien lo encontró).
+--   · En el pin rojo, dos columnas que mantiene un trigger:
+--       verde_en_curso: el verde vinculado en curso (o null).
+--       encontrado:     ese verde está vigente (no caducado). El mapa y "Se busca" ocultan
+--                       el rojo para no mostrar el mismo objeto dos veces.
+--     Si el verde caduca, el rojo vuelve a mostrarse en "Se busca" con la nota "Alguien dijo
+--     que lo encontró" (verde_en_curso sigue lleno). Al entregarse, el rojo se cierra (ya lo
+--     hace verificar_clave).
 -- ════════════════════════════════════════════════════════════════════════════
 
 alter table public.pines add column encontrado boolean not null default false;
+alter table public.pines
+  add column verde_en_curso uuid references public.pines (id) on delete set null;
+create index pines_verde_en_curso_idx on public.pines (verde_en_curso);
 comment on column public.pines.encontrado is
-  'Pin rojo con un pin verde vinculado ("Lo encontré") que aún no se entrega.';
+  'Pin rojo con un pin verde vinculado vigente ("Lo encontré"): no se muestra en el mapa ni en "Se busca".';
+comment on column public.pines.verde_en_curso is
+  'Pin verde vinculado que aún no se entrega (aunque haya caducado).';
 
--- ¿El pin rojo tiene un verde vinculado en curso?
+-- El verde vinculado en curso de un pin rojo (el más reciente), o null
+create or replace function private.verde_en_curso(rojo uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select v.id from public.pines v
+  where v.pin_vinculado_id = rojo
+    and v.estado not in ('entregado', 'no_reclamado')
+  order by v.creado_en desc
+  limit 1;
+$$;
+revoke execute on function private.verde_en_curso(uuid) from public, anon, authenticated;
+
+-- ¿El pin rojo tiene un verde vinculado en curso? (bloquea un segundo "Lo encontré")
 create or replace function private.tiene_verde_en_curso(rojo uuid)
 returns boolean
 language sql
@@ -20,15 +47,32 @@ stable
 security definer
 set search_path = ''
 as $$
-  select exists (
-    select 1 from public.pines v
-    where v.pin_vinculado_id = rojo
-      and v.estado not in ('entregado', 'no_reclamado')
-  );
+  select private.verde_en_curso(rojo) is not null;
 $$;
 revoke execute on function private.tiene_verde_en_curso(uuid) from public, anon, authenticated;
 
--- Al crear o cambiar de estado un pin verde vinculado, se recalcula "encontrado" en su rojo
+-- Recalcula verde_en_curso y encontrado en un pin rojo
+create or replace function private.actualizar_rojo_encontrado(rojo uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_verde uuid := private.verde_en_curso(rojo);
+  v_vigente boolean := v_verde is not null and exists (
+    select 1 from public.pines v where v.id = v_verde and v.estado <> 'caducado'
+  );
+begin
+  update public.pines
+  set verde_en_curso = v_verde, encontrado = v_vigente
+  where id = rojo
+    and (verde_en_curso is distinct from v_verde or encontrado is distinct from v_vigente);
+end;
+$$;
+revoke execute on function private.actualizar_rojo_encontrado(uuid) from public, anon, authenticated;
+
+-- Al crear o cambiar de estado un pin verde vinculado, se recalcula su rojo
 create or replace function private.marcar_rojo_encontrado()
 returns trigger
 language plpgsql
@@ -37,10 +81,7 @@ set search_path = ''
 as $$
 begin
   if new.pin_vinculado_id is not null then
-    update public.pines
-    set encontrado = private.tiene_verde_en_curso(new.pin_vinculado_id)
-    where id = new.pin_vinculado_id
-      and encontrado is distinct from private.tiene_verde_en_curso(new.pin_vinculado_id);
+    perform private.actualizar_rojo_encontrado(new.pin_vinculado_id);
   end if;
   return new;
 end;
@@ -51,8 +92,7 @@ create trigger marcar_rojo_encontrado
   for each row execute function private.marcar_rojo_encontrado();
 
 -- Datos que ya existen
-update public.pines r set encontrado = true
-where r.tipo = 'rojo' and private.tiene_verde_en_curso(r.id);
+select private.actualizar_rojo_encontrado(r.id) from public.pines r where r.tipo = 'rojo';
 
 -- ─── "Lo encontré": una sola vez mientras el anterior siga en curso ─────────
 
@@ -133,6 +173,8 @@ begin
   if not (
     (v_pin.estado = 'activo' and v_pin.expira_en > now())
     or v_pin.estado in ('con_solicitud', 'en_resguardo')
+    -- Su dueño (ya revisado arriba) puede reclamar un verde vinculado aunque haya caducado
+    or (v_pin.estado = 'caducado' and v_pin.pin_vinculado_id is not null)
   ) then
     raise exception 'Este objeto ya no se puede reclamar';
   end if;
@@ -157,7 +199,8 @@ begin
     -- En resguardo el pin no cambia de estado; responde el personal del punto
     perform private.avisar_personal(v_pin.punto_seguro_id, 'reclamaron_mi_objeto', p_pin, v_solicitud);
   else
-    update public.pines set estado = 'con_solicitud' where id = p_pin and estado = 'activo';
+    update public.pines set estado = 'con_solicitud'
+    where id = p_pin and estado in ('activo', 'caducado');
     perform private.avisar(v_pin.autor_id, 'reclamaron_mi_objeto', p_pin, v_solicitud);
   end if;
   return v_solicitud;
