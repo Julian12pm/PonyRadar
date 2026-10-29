@@ -119,6 +119,7 @@ Las migraciones están numeradas en `supabase/migrations/` y se aplican en orden
 | `0008_paneles.sql`                 | Funciones del admin: roles, personal de puntos seguros, quitar strikes, desbloquear |
 | `0009_puntos_con_personal.sql`     | Solo se dejan objetos en puntos seguros activos y con personal                      |
 | `0010_lo_encontre_unico.sql`       | "Lo encontré" una sola vez por pin rojo; solo su dueño reclama el verde vinculado   |
+| `0012_rojo_tras_borrar_verde.sql`  | Si se borra un verde vinculado, su pin rojo vuelve a mostrarse                      |
 
 `supabase/seed.sql` agrega los datos de demo (semestre vigente y el punto seguro de la Biblioteca).
 
