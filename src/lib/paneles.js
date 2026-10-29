@@ -94,7 +94,8 @@ export function puedeMarcarNoReclamado(recibido, semestres, ahora = new Date()) 
 
 // ─── Panel de admin ───
 
-export async function buscarPerfiles(texto = '') {
+/** @param {boolean} soloAlias solo cuentas con "+alias" en el correo */
+export async function buscarPerfiles(texto = '', soloAlias = false) {
   let consulta = supabase
     .from('perfiles')
     .select('id, correo, nombre, rol, suspendido_hasta, bloqueado, creado_en')
@@ -102,7 +103,67 @@ export async function buscarPerfiles(texto = '') {
     .limit(50)
   const limpio = texto.trim().toLowerCase()
   if (limpio) consulta = consulta.ilike('correo', `%${limpio.replace(/[%_]/g, '')}%`)
+  if (soloAlias) consulta = consulta.like('correo', '%+%')
   return revisar(await consulta)
+}
+
+// ─── Alias autorizados (correos con "+" que pueden tener cuenta propia) ───
+
+export async function cargarAliasPermitidos() {
+  return revisar(
+    await supabase.from('alias_permitidos').select('correo, nota, creado_en').order('correo'),
+  )
+}
+
+export async function autorizarAlias(correo, nota = '') {
+  revisar(
+    await supabase
+      .from('alias_permitidos')
+      .insert({ correo: correo.trim().toLowerCase(), nota: nota.trim() }),
+  )
+}
+
+export async function quitarAlias(correo) {
+  revisar(await supabase.from('alias_permitidos').delete().eq('correo', correo))
+}
+
+// ─── Pines (moderación) ───
+
+/** Pines más recientes (o los que tengan ese texto en el título), con el correo del autor. */
+export async function buscarPines(texto = '') {
+  let consulta = supabase
+    .from('pines')
+    .select(`${COLUMNAS}, autor:perfiles(correo)`)
+    .order('creado_en', { ascending: false })
+    .limit(50)
+  const limpio = texto.trim()
+  if (limpio) consulta = consulta.ilike('titulo', `%${limpio.replace(/[%_]/g, '')}%`)
+  const filas = revisar(await consulta)
+  return filas.map((f) => ({ ...filaAPin(f), autorCorreo: f.autor?.correo ?? '' }))
+}
+
+/** Elimina un pin con su motivo (queda registro) y después sus fotos. */
+export async function eliminarPin(pinId, motivo) {
+  await llamar('admin_eliminar_pin', { p_pin: pinId, p_motivo: motivo.trim() })
+  // Si falla, el pin ya no existe: las fotos quedan huérfanas, pero no se ven en la app
+  await supabase.storage
+    .from('fotos')
+    .remove([`${pinId}/publica.webp`, `${pinId}/nitida.webp`])
+    .catch(() => {})
+}
+
+/** Últimos pines eliminados por el admin. */
+export async function cargarModeracion() {
+  const filas = revisar(
+    await supabase
+      .from('moderacion')
+      .select(
+        'id, accion, titulo, tipo, motivo, creado_en, autor:perfiles!moderacion_autor_id_fkey(correo)',
+      )
+      .order('creado_en', { ascending: false })
+      .limit(20),
+  )
+  return filas.map((f) => ({ ...f, autorCorreo: f.autor?.correo ?? 'cuenta borrada' }))
 }
 
 /** Strikes de una persona (vigentes y quitados), con el objeto que intentó reclamar. */

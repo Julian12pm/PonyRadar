@@ -17,7 +17,26 @@ vi.mock('../lib/paneles.js', async (original) => ({
   buscarPerfiles: vi.fn(async () => [
     { id: 'yo', correo: 'l23121115+admin@morelia.tecnm.mx', rol: 'admin', bloqueado: false },
     { id: 'c', correo: 'carla@morelia.tecnm.mx', rol: 'comunidad', bloqueado: true },
+    { id: 's', correo: 'l23121064+sec@morelia.tecnm.mx', rol: 'comunidad', bloqueado: false },
   ]),
+  cargarAliasPermitidos: vi.fn(async () => [
+    { correo: 'l23121115+admin@morelia.tecnm.mx', nota: 'Cuenta admin', creado_en: '' },
+  ]),
+  autorizarAlias: vi.fn(async () => null),
+  quitarAlias: vi.fn(async () => null),
+  buscarPines: vi.fn(async () => [
+    {
+      id: 'r1',
+      tipo: 'rojo',
+      categoria: 'otros',
+      titulo: 'asdf!!',
+      estado: 'activo',
+      creado: new Date().toISOString(),
+      autorCorreo: 'l23121064@morelia.tecnm.mx',
+    },
+  ]),
+  eliminarPin: vi.fn(async () => null),
+  cargarModeracion: vi.fn(async () => []),
   cargarStrikes: vi.fn(async () => [
     {
       id: 'k1',
@@ -74,7 +93,8 @@ describe('Panel de admin', () => {
     await waitFor(() => expect(paneles.cambiarRol).toHaveBeenCalledWith('c', 'punto_seguro'))
 
     expect(await screen.findByText(/Reclamó "Termo"/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Quitar' }))
+    const strike = screen.getByText(/Reclamó "Termo"/).closest('li')
+    fireEvent.click(within(strike).getByRole('button', { name: 'Quitar' }))
     await waitFor(() => expect(paneles.quitarStrike).toHaveBeenCalledWith('k1'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Desbloquear cuenta' }))
@@ -93,6 +113,47 @@ describe('Panel de admin', () => {
         'l23121115+admin@morelia.tecnm.mx',
       ),
     )
+  })
+})
+
+describe('Moderación', () => {
+  it('marca las cuentas con alias: autorizado o sin autorizar (con su buzón real)', async () => {
+    en('/admin', <PanelAdmin perfil={admin} />)
+    const propia = (await screen.findByRole('button', { name: /l23121115\+admin/ })).closest('li')
+    expect(within(propia).getByText('Alias autorizado')).toBeInTheDocument()
+    const otra = screen.getByRole('button', { name: /l23121064\+sec/ }).closest('li')
+    expect(
+      within(otra).getByText('Alias sin autorizar, buzón l23121064@morelia.tecnm.mx'),
+    ).toBeInTheDocument()
+    // Filtro para ver solo cuentas con "+"
+    fireEvent.click(screen.getByLabelText('Solo cuentas con "+" en el correo'))
+    await waitFor(() => expect(paneles.buscarPerfiles).toHaveBeenLastCalledWith('', true))
+  })
+
+  it('autoriza un alias solo si es institucional y lleva "+"', async () => {
+    en('/admin', <PanelAdmin perfil={admin} />)
+    const correo = await screen.findByLabelText('Correo con alias')
+    const autorizar = screen.getByRole('button', { name: 'Autorizar alias' })
+    fireEvent.change(correo, { target: { value: 'l23121115@morelia.tecnm.mx' } })
+    expect(autorizar).toBeDisabled()
+    fireEvent.change(correo, { target: { value: 'l23121115+prueba@morelia.tecnm.mx' } })
+    fireEvent.click(autorizar)
+    await waitFor(() =>
+      expect(paneles.autorizarAlias).toHaveBeenCalledWith('l23121115+prueba@morelia.tecnm.mx', ''),
+    )
+  })
+
+  it('eliminar un pin pide confirmación y motivo', async () => {
+    en('/admin?vista=pines', <PanelAdmin perfil={admin} />)
+    const fila = (await screen.findByText('asdf!!')).closest('li')
+    fireEvent.click(within(fila).getByRole('button', { name: 'Eliminar' }))
+    const eliminar = within(fila).getByRole('button', { name: 'Eliminar pin' })
+    expect(eliminar).toBeDisabled()
+    fireEvent.change(within(fila).getByLabelText('Motivo (queda registrado)'), {
+      target: { value: 'Título basura' },
+    })
+    fireEvent.click(eliminar)
+    await waitFor(() => expect(paneles.eliminarPin).toHaveBeenCalledWith('r1', 'Título basura'))
   })
 })
 

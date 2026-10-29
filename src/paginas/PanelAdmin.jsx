@@ -1,5 +1,7 @@
 // Panel del admin:
-//   · Usuarios: buscar por correo, cambiar rol, revisar y quitar strikes, desbloquear.
+//   · Usuarios: buscar por correo, cambiar rol, revisar y quitar strikes, desbloquear; las
+//     cuentas con "+alias" se marcan y aquí se autorizan los alias permitidos.
+//   · Pines: buscar y eliminar un pin con motivo (queda registro).
 //   · Puntos seguros: crear, activar/desactivar y asignar personal (también a uno mismo).
 //   · Semestres: las fechas que usan los strikes y el "no reclamado".
 //   · En camino: objetos que nunca llegaron al punto seguro → regresarlos al mapa.
@@ -9,27 +11,37 @@ import { useNavigate, useSearchParams } from 'react-router'
 import {
   activarPuntoSeguro,
   asignarPersonal,
+  autorizarAlias,
   buscarPerfiles,
+  buscarPines,
   cambiarRol,
+  cargarAliasPermitidos,
   cargarEnCamino,
+  cargarModeracion,
   cargarPuntosAdmin,
   cargarSemestres,
   cargarStrikes,
   crearPuntoSeguro,
   crearSemestre,
   desbloquear,
+  eliminarPin,
   horasDesde,
+  quitarAlias,
   quitarPersonal,
   quitarStrike,
   regresarAActivo,
   strikesVigentes,
 } from '../lib/paneles.js'
+import { nombreCategoria } from '../lib/categorias.js'
+import { buzonDe, esCorreoInstitucional, tieneAlias } from '../lib/correo.js'
 import { fechaCorta, motivoSuspension } from '../lib/reglas.js'
+import { haceCuanto } from '../lib/tiempo.js'
 import { useAccion } from '../lib/useAccion.js'
 import { ZONAS, nombreCorto } from '../mapa/zonas.js'
 
 const VISTAS = [
   { id: 'usuarios', titulo: 'Usuarios' },
+  { id: 'pines', titulo: 'Pines' },
   { id: 'puntos', titulo: 'Puntos seguros' },
   { id: 'semestres', titulo: 'Semestres' },
   { id: 'camino', titulo: 'En camino' },
@@ -170,11 +182,96 @@ function DetalleUsuario({ usuario, soyYo, onCambio }) {
   )
 }
 
+/** Marca de una cuenta con "+alias": autorizada o no (las no autorizadas son de antes de 0011). */
+function MarcaAlias({ correo, autorizados }) {
+  if (!tieneAlias(correo)) return null
+  const autorizado = autorizados?.some((a) => a.correo === correo)
+  return autorizado ? (
+    <span className="etiqueta-alias">Alias autorizado</span>
+  ) : (
+    <span className="etiqueta-alias etiqueta-alias-mal">
+      Alias sin autorizar, buzón {buzonDe(correo)}
+    </span>
+  )
+}
+
+function AliasAutorizados({ alias, onCambio }) {
+  const [correo, setCorreo] = useState('')
+  const [nota, setNota] = useState('')
+  const { ocupado, error, correr } = useAccion(onCambio)
+  const valido = esCorreoInstitucional(correo) && tieneAlias(correo)
+
+  return (
+    <section className="tarjeta grid gap-2 p-3.5" aria-labelledby="titulo-alias">
+      <h3 id="titulo-alias" className="text-lg font-extrabold">
+        Alias autorizados
+      </h3>
+      <p className="text-sm text-tinta/75">
+        Solo se permite una cuenta por correo institucional. Los correos con "+" de esta lista (por
+        ejemplo, cuentas de prueba) sí pueden registrarse.
+      </p>
+      <ul className="grid gap-1">
+        {alias?.map((a) => (
+          <li key={a.correo} className="flex items-center gap-2 text-sm">
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">{a.correo}</span>
+              {a.nota && <span className="block text-tinta/70">{a.nota}</span>}
+            </span>
+            <button
+              type="button"
+              className="enlace-accion shrink-0"
+              disabled={ocupado}
+              onClick={() => correr(() => quitarAlias(a.correo))}
+            >
+              Quitar
+            </button>
+          </li>
+        ))}
+      </ul>
+      <form
+        className="grid gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault()
+          await correr(() => autorizarAlias(correo, nota))
+          setCorreo('')
+          setNota('')
+        }}
+      >
+        <label className="campo">
+          Correo con alias
+          <input
+            type="email"
+            required
+            value={correo}
+            onChange={(e) => setCorreo(e.target.value)}
+            placeholder="l23121115+prueba@morelia.tecnm.mx"
+          />
+        </label>
+        <label className="campo">
+          Nota (opcional)
+          <input
+            maxLength={120}
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+            placeholder="Para qué es"
+          />
+        </label>
+        <button type="submit" className="boton-chico" disabled={ocupado || !valido}>
+          Autorizar alias
+        </button>
+      </form>
+      <MensajeError texto={error} />
+    </section>
+  )
+}
+
 function Usuarios({ perfil }) {
   const [texto, setTexto] = useState('')
   const [buscado, setBuscado] = useState('')
+  const [soloAlias, setSoloAlias] = useState(false)
   const [abierto, setAbierto] = useState(null)
-  const usuarios = useCarga(() => buscarPerfiles(buscado), [buscado])
+  const usuarios = useCarga(() => buscarPerfiles(buscado, soloAlias), [buscado, soloAlias])
+  const alias = useCarga(cargarAliasPermitidos, [])
 
   return (
     <section className="grid gap-3">
@@ -198,6 +295,15 @@ function Usuarios({ perfil }) {
           Buscar
         </button>
       </form>
+      <label className="flex items-center gap-2 px-1 text-sm font-semibold">
+        <input
+          type="checkbox"
+          className="size-4"
+          checked={soloAlias}
+          onChange={(e) => setSoloAlias(e.target.checked)}
+        />
+        Solo cuentas con "+" en el correo
+      </label>
       <MensajeError texto={usuarios.error} />
       {usuarios.datos?.length === 0 && (
         <p className="text-center text-tinta/70">Nadie con ese correo.</p>
@@ -218,6 +324,7 @@ function Usuarios({ perfil }) {
                   {u.bloqueado ? ', bloqueada' : motivoSuspension(u) ? ', suspendida' : ''}
                   {u.id === perfil?.id && ', tú'}
                 </span>
+                <MarcaAlias correo={u.correo} autorizados={alias.datos} />
               </span>
               <span aria-hidden="true" className="text-xl">
                 {abierto === u.id ? '−' : '+'}
@@ -233,6 +340,138 @@ function Usuarios({ perfil }) {
           </li>
         ))}
       </ul>
+      <AliasAutorizados alias={alias.datos} onCambio={alias.recargar} />
+    </section>
+  )
+}
+
+// ─── Pines (moderación) ───
+
+function PinModerado({ pin, onCambio }) {
+  const [confirmar, setConfirmar] = useState(false)
+  const [motivo, setMotivo] = useState('')
+  const { ocupado, error, correr } = useAccion(onCambio)
+
+  return (
+    <li className={`caso ${pin.tipo === 'rojo' ? 'caso-rojo' : 'caso-verde'}`}>
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-lg leading-tight font-extrabold">{pin.titulo}</p>
+          <p className="text-sm text-tinta/70">
+            {pin.tipo === 'rojo' ? 'Perdido' : 'Encontrado'}, {nombreCategoria(pin.categoria)},{' '}
+            {pin.estado.replace('_', ' ')}, {haceCuanto(pin.creado)}
+          </p>
+          <p className="text-sm">{pin.autorCorreo}</p>
+        </div>
+        {!confirmar && (
+          <button
+            type="button"
+            className="boton-chico shrink-0 px-2.5 text-sm text-pin-rojo"
+            onClick={() => setConfirmar(true)}
+          >
+            Eliminar
+          </button>
+        )}
+      </div>
+      {confirmar && (
+        <form
+          className="mt-2.5 grid gap-2 rounded-xl bg-[#fde7e8] p-2.5"
+          onSubmit={(e) => {
+            e.preventDefault()
+            correr(() => eliminarPin(pin.id, motivo))
+          }}
+        >
+          <label className="campo">
+            Motivo (queda registrado)
+            <textarea
+              rows={2}
+              required
+              maxLength={300}
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Ej. Título sin sentido, pin de prueba"
+            />
+          </label>
+          <p className="text-sm font-semibold">
+            Se borra el pin con sus solicitudes y avisos. No se puede deshacer.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className="boton-chico" onClick={() => setConfirmar(false)}>
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="boton-chico bg-pin-rojo text-white"
+              disabled={ocupado || motivo.trim().length < 3}
+            >
+              Eliminar pin
+            </button>
+          </div>
+        </form>
+      )}
+      <MensajeError texto={error} />
+    </li>
+  )
+}
+
+function Pines() {
+  const [texto, setTexto] = useState('')
+  const [buscado, setBuscado] = useState('')
+  const pines = useCarga(() => buscarPines(buscado), [buscado])
+  const historial = useCarga(cargarModeracion, [])
+  const recargar = () => {
+    pines.recargar()
+    historial.recargar()
+  }
+
+  return (
+    <section className="grid gap-3">
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          setBuscado(texto)
+        }}
+      >
+        <label className="campo flex-1">
+          <span className="sr-only">Buscar por título</span>
+          <input
+            type="search"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder="Buscar por título"
+          />
+        </label>
+        <button type="submit" className="boton-chico px-4">
+          Buscar
+        </button>
+      </form>
+      <MensajeError texto={pines.error} />
+      {pines.datos?.length === 0 && <p className="text-center text-tinta/70">Ningún pin.</p>}
+      <ul className="grid gap-2">
+        {pines.datos?.map((p) => (
+          <PinModerado key={p.id} pin={p} onCambio={recargar} />
+        ))}
+      </ul>
+      {historial.datos?.length > 0 && (
+        <section aria-labelledby="titulo-eliminados">
+          <h3 id="titulo-eliminados" className="titulo-grupo">
+            Eliminados recientemente
+          </h3>
+          <ul className="grid gap-1.5">
+            {historial.datos.map((m) => (
+              <li key={m.id} className="solicitud text-sm">
+                <p className="font-semibold">
+                  {m.titulo} ({m.tipo === 'rojo' ? 'perdido' : 'encontrado'}) de {m.autorCorreo}
+                </p>
+                <p className="text-tinta/70">
+                  {fechaCorta(m.creado_en)}: {m.motivo}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </section>
   )
 }
@@ -539,7 +778,7 @@ export default function PanelAdmin({ perfil }) {
               Punto seguro
             </button>
           </div>
-          <div className="pestanas pestanas-4 mt-2" role="tablist" aria-label="Secciones">
+          <div className="pestanas pestanas-admin mt-2" role="tablist" aria-label="Secciones">
             {VISTAS.map((v) => (
               <button
                 key={v.id}
@@ -560,6 +799,7 @@ export default function PanelAdmin({ perfil }) {
         {vista === 'puntos' && <PuntosSeguros perfil={perfil} />}
         {vista === 'semestres' && <Semestres />}
         {vista === 'camino' && <EnCamino />}
+        {vista === 'pines' && <Pines />}
       </div>
     </main>
   )
