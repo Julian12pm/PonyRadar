@@ -355,7 +355,7 @@ export default function TarjetaCaso({ caso, puntos = [], onCambio, onVerPin }) {
 
       {accion === 'reclamar' &&
         caso.encontrados
-          .filter((v) => ['activo', 'con_solicitud', 'en_resguardo'].includes(v.estado))
+          .filter((v) => ['activo', 'con_solicitud', 'en_resguardo', 'caducado'].includes(v.estado))
           .map((v) => (
             <button
               key={v.id}

@@ -10,7 +10,7 @@ export function errorDe(error) {
 export const ESTADOS_EN_MAPA = ['activo', 'con_solicitud', 'aceptado']
 
 export const COLUMNAS =
-  'id, autor_id, tipo, categoria, titulo, descripcion, zona_id, piso, x, y, estado, creado_en, expira_en, renovado, foto_publica, tiene_foto_nitida, punto_seguro_id, pin_vinculado_id, encontrado'
+  'id, autor_id, tipo, categoria, titulo, descripcion, zona_id, piso, x, y, estado, creado_en, expira_en, renovado, foto_publica, tiene_foto_nitida, punto_seguro_id, pin_vinculado_id, encontrado, verde_en_curso'
 
 /** Convierte una fila de la tabla "pines" al formato que usa la app. */
 export function filaAPin(fila) {
@@ -34,6 +34,9 @@ export function filaAPin(fila) {
     // "Lo encontré": el verde apunta a su rojo; el rojo queda "encontrado" mientras siga en curso
     pinVinculadoId: fila.pin_vinculado_id ?? null,
     encontrado: Boolean(fila.encontrado),
+    // Verde vinculado que aún no se entrega (aunque haya caducado): el rojo lleva la nota
+    // "Alguien dijo que lo encontró" y no acepta otro "Lo encontré"
+    verdeEnCursoId: fila.verde_en_curso ?? null,
   }
 }
 

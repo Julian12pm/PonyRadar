@@ -34,6 +34,12 @@ describe('"Lo encontré" una sola vez', () => {
     expect(screen.queryByRole('button', { name: 'Lo encontré' })).not.toBeInTheDocument()
   })
 
+  it('si su verde caducó, el rojo vuelve a verse con la nota y sigue sin "Lo encontré"', () => {
+    abrir(pin({ tipo: 'rojo', estado: 'caducado', encontrado: false, verdeEnCursoId: 'v1' }))
+    expect(screen.getByText(/Alguien dijo que lo encontró/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Lo encontré' })).not.toBeInTheDocument()
+  })
+
   it('si dos personas lo intentan a la vez, la segunda ve el aviso del servidor', async () => {
     casos.loEncontre.mockRejectedValueOnce(new Error('Alguien ya dijo que lo encontró'))
     abrir(pin({ tipo: 'rojo' }))
@@ -56,6 +62,18 @@ describe('"Es mío" en un verde vinculado', () => {
     casos.soyAutorDelPin.mockResolvedValueOnce(true)
     abrir(pin({ pinVinculadoId: 'rojo-1' }))
     expect(await screen.findByRole('button', { name: 'Es mío' })).toBeInTheDocument()
+  })
+
+  it('un verde vinculado caducado: el dueño del rojo lo reclama, nadie más', async () => {
+    casos.soyAutorDelPin.mockResolvedValueOnce(true)
+    const { unmount } = abrir(pin({ pinVinculadoId: 'rojo-1', estado: 'caducado' }))
+    expect(await screen.findByRole('button', { name: 'Es mío' })).toBeInTheDocument()
+    unmount()
+    abrir(pin({ pinVinculadoId: 'rojo-1', estado: 'caducado' }))
+    expect(await screen.findByText(/solo esa persona puede reclamarlo/)).toBeInTheDocument()
+    // Un verde caducado sin vínculo no se reclama (debe ir a un punto seguro)
+    abrir(pin({ id: 'p9', estado: 'caducado' }))
+    expect(screen.queryAllByRole('button', { name: 'Es mío' })).toHaveLength(0)
   })
 
   it('un verde sin vínculo lo puede reclamar cualquiera (sin preguntar por el rojo)', async () => {

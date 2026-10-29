@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import TarjetaPin from '../componentes/TarjetaPin.jsx'
 import { nombreCategoria } from '../lib/categorias.js'
-import { cargarListas } from '../lib/casos.js'
+import { cargarListas, cargarPin } from '../lib/casos.js'
 import { diasEnSeBusca, motivoSuspension } from '../lib/reglas.js'
 import { haceCuanto } from '../lib/tiempo.js'
 import { nombreCorto, zonaPorId } from '../mapa/zonas.js'
@@ -66,10 +66,25 @@ export default function Listas({ perfil }) {
 
   // "?pin=<id>" abre ese objeto (desde Mis casos o un aviso)
   const idAbierto = parametros.get('pin')
-  const abierto =
+  const enLista =
     idAbierto && datos
       ? ([...datos.seBusca, ...datos.enResguardo].find((p) => p.id === idAbierto) ?? null)
       : null
+  // Si no está en ninguna lista (por ejemplo, un verde caducado que su dueño va a reclamar),
+  // se trae aparte
+  const [suelto, setSuelto] = useState(null)
+  const buscarSuelto = Boolean(idAbierto && datos && !enLista)
+  useEffect(() => {
+    if (!buscarSuelto) return undefined
+    let vigente = true
+    cargarPin(idAbierto)
+      .then((p) => vigente && setSuelto(p))
+      .catch(() => {})
+    return () => {
+      vigente = false
+    }
+  }, [idAbierto, buscarSuelto])
+  const abierto = enLista ?? (suelto?.id === idAbierto ? suelto : null)
   const cambiarParametros = (cambios) => {
     const siguiente = new URLSearchParams(parametros)
     for (const [clave, valor] of Object.entries(cambios)) {
@@ -145,7 +160,7 @@ export default function Listas({ perfil }) {
                   <FilaObjeto
                     key={p.id}
                     pin={p}
-                    detalle={`Se perdió ${haceCuanto(p.creado)}. ${dias === 1 ? 'Queda 1 día' : `Quedan ${dias} días`} en la lista.`}
+                    detalle={`Se perdió ${haceCuanto(p.creado)}. ${dias === 1 ? 'Queda 1 día' : `Quedan ${dias} días`} en la lista.${p.verdeEnCursoId ? ' Alguien dijo que lo encontró.' : ''}`}
                     onAbrir={(pin) => cambiarParametros({ pin: pin.id })}
                   />
                 )

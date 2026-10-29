@@ -255,6 +255,11 @@ describe('Fase 4: puntos seguros, caducidad y renovación', () => {
     expect(casoCerrado(fuera, ahora)).toBe(true)
   })
 
+  it('si el verde vinculado caducó, el dueño todavía lo puede reclamar', () => {
+    const caso = perdi({ estado: 'caducado', expira: hace(3) }, [pin('v9', { estado: 'caducado' })])
+    expect(accionPendiente(caso, ahora)).toBe('reclamar')
+  })
+
   it('"Lo encontré" desde "Se busca" también pide reclamar', () => {
     const caso = perdi({ estado: 'caducado', expira: hace(3) }, [pin('v9', { estado: 'activo' })])
     expect(accionPendiente(caso, ahora)).toBe('reclamar')
