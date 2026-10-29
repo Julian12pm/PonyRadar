@@ -107,17 +107,18 @@ Se guardan en `.env.local` (git lo ignora). Nunca subas llaves al repositorio.
 
 Las migraciones están numeradas en `supabase/migrations/` y se aplican en orden:
 
-| Migración                          | Qué hace                                                                            |
-| ---------------------------------- | ----------------------------------------------------------------------------------- |
-| `0001_esquema_inicial.sql`         | Tablas, tipos, RLS en todas las tablas, perfil automático y hook de correo          |
-| `0002_zonas.sql`                   | Zonas del mapa (se genera con `npm run zonas:sql`)                                  |
-| `0003_crear_pines.sql`             | Funciones RPC `crear_pin` y `adjuntar_fotos`                                        |
-| `0004_fotos_y_tiempo_real.sql`     | Bucket privado `fotos`, sus políticas y tiempo real para `pines`                    |
-| `0005_ajustes_rendimiento.sql`     | Índice faltante y políticas del admin separadas por acción                          |
-| `0006_reclamos_y_entrega.sql`      | Es mío, Lo encontré, aceptar/rechazar/impostor, clave, contacto y avisos            |
-| `0007_puntos_seguros_y_reglas.sql` | Puntos seguros, strikes y suspensión, caducidad (pg_cron), renovar, no reclamado    |
-| `0008_paneles.sql`                 | Funciones del admin: roles, personal de puntos seguros, quitar strikes, desbloquear |
-| `0009_puntos_con_personal.sql`     | Solo se dejan objetos en puntos seguros activos y con personal                      |
+| Migración                          | Qué hace                                                                                                   |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `0001_esquema_inicial.sql`         | Tablas, tipos, RLS en todas las tablas, perfil automático y hook de correo                                 |
+| `0002_zonas.sql`                   | Zonas del mapa (se genera con `npm run zonas:sql`)                                                         |
+| `0003_crear_pines.sql`             | Funciones RPC `crear_pin` y `adjuntar_fotos`                                                               |
+| `0004_fotos_y_tiempo_real.sql`     | Bucket privado `fotos`, sus políticas y tiempo real para `pines`                                           |
+| `0005_ajustes_rendimiento.sql`     | Índice faltante y políticas del admin separadas por acción                                                 |
+| `0006_reclamos_y_entrega.sql`      | Es mío, Lo encontré, aceptar/rechazar/impostor, clave, contacto y avisos                                   |
+| `0007_puntos_seguros_y_reglas.sql` | Puntos seguros, strikes y suspensión, caducidad (pg_cron), renovar, no reclamado                           |
+| `0008_paneles.sql`                 | Funciones del admin: roles, personal de puntos seguros, quitar strikes, desbloquear                        |
+| `0009_puntos_con_personal.sql`     | Solo se dejan objetos en puntos seguros activos y con personal                                             |
+| `0011_moderacion.sql`              | Una cuenta por correo (sin "+alias" salvo los autorizados), eliminar pines con motivo y títulos con letras |
 
 `supabase/seed.sql` agrega los datos de demo (semestre vigente y el punto seguro de la Biblioteca).
 
@@ -181,7 +182,9 @@ El botón **Panel** del mapa aparece para el personal de puntos seguros y para e
 - **Punto seguro** (`/punto`): objetos por recibir ("Ya lo recibí"), reclamos para comparar con el dato ciego (aceptar, rechazar o impostor), entregas (el personal escribe la clave que dicta el dueño) y lo guardado, que al terminar el semestre se puede marcar "no reclamado".
 - **Admin** (`/admin`): usuarios (rol, strikes con "Quitar", desbloquear o levantar suspensión), puntos seguros (crear, activar y asignar personal por correo, incluido "Asignarme a mí"), semestres y objetos en camino ("Regresar al mapa").
 - **Roles:** el primer admin se asigna por SQL (`update public.perfiles set rol = 'admin' where correo = '…';`). Desde la app solo un admin cambia roles y nadie puede quitarse a sí mismo el rol de admin. Asignar a alguien a un punto seguro lo pasa a "punto seguro" (un admin conserva su rol); quitarlo de todos lo regresa a "comunidad".
-- **Correos con "+":** se aceptan alias como `l23121115+admin@morelia.tecnm.mx` (Microsoft 365 los entrega en la misma bandeja). Lo validan la app, el hook y el trigger, y siempre exigen `@morelia.tecnm.mx` al final.
+- **Una cuenta por persona:** el correo se normaliza quitando el "+alias" (`l23121064+sec@…` → `l23121064@…`) y solo se puede registrar una cuenta por buzón real. Los alias que el admin autorice en **Usuarios → Alias autorizados** sí pueden registrarse (por ejemplo, la cuenta admin de prueba). Lo revisan el hook de registro y el trigger del perfil; las cuentas con alias que ya existían siguen funcionando y el panel las marca ("Alias sin autorizar, buzón …").
+- **Moderación:** en **Admin → Pines** se busca un pin por título y se elimina con un motivo, que queda registrado (tabla `moderacion`). Se borran también sus solicitudes, avisos y fotos.
+- **Títulos:** de 3 a 60 caracteres y con al menos una letra (lo revisan la app y `crear_pin`).
 
 ## App instalable (PWA)
 

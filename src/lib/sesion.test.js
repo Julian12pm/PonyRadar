@@ -26,6 +26,19 @@ describe('enviarCodigo', () => {
   })
 })
 
+describe('rechazos del registro por alias', () => {
+  it('muestra el motivo del servidor', () => {
+    expect(
+      traducirErrorAuth({
+        message: 'Usa tu correo institucional sin "+": solo se permite una cuenta por persona',
+      }),
+    ).toMatch(/sin "\+"/)
+    expect(
+      traducirErrorAuth({ message: 'Ya existe una cuenta con este correo institucional' }),
+    ).toBe('Ya existe una cuenta con este correo institucional')
+  })
+})
+
 describe('verificarCodigo', () => {
   it('verifica el código de tipo email', async () => {
     await verificarCodigo('A@morelia.tecnm.mx', ' 123456 ')

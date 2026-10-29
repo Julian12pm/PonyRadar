@@ -43,7 +43,12 @@ describe('HojaLugar', () => {
       target: { value: 'K-12' },
     })
     fireEvent.change(screen.getByLabelText('Categoría'), { target: { value: 'llaves' } })
+    // Un título sin letras no se puede publicar y se explica por qué
+    fireEvent.change(screen.getByLabelText('¿Qué perdiste?'), { target: { value: '!!!! 123' } })
+    expect(publicar).toBeDisabled()
+    expect(screen.getByText(/al menos una letra/)).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('¿Qué perdiste?'), { target: { value: '  Llaves  ' } })
+    expect(screen.queryByText(/al menos una letra/)).not.toBeInTheDocument()
     expect(publicar).toBeEnabled()
     // Un pin rojo no pide dato ciego
     expect(screen.queryByLabelText(/Dato ciego/)).not.toBeInTheDocument()

@@ -54,6 +54,8 @@ export function traducirErrorAuth(error) {
   if (/rate limit|security purposes|too many/i.test(mensaje)) {
     return 'Pediste demasiados códigos. Espera un momento y vuelve a intentar.'
   }
+  // Rechazos del registro (hook "Before User Created", migración 0011): se muestran tal cual
+  if (/solo se permite una cuenta|Ya existe una cuenta/i.test(mensaje)) return mensaje
   if (/morelia\.tecnm\.mx/.test(mensaje)) return 'Usa tu correo institucional @morelia.tecnm.mx'
   if (/fetch|network/i.test(mensaje) || error?.status === 0) {
     return 'No hay conexión con el servidor. Intenta de nuevo en un momento.'
