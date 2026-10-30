@@ -3,6 +3,7 @@
 // y los paneles del punto seguro ("/punto") y del admin ("/admin"). Los avisos se escuchan aquí para que el contador
 // se vea en las dos pantallas.
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import AvisoVersion from './componentes/AvisoVersion.jsx'
 import { configurado } from './lib/supabase.js'
 import { useSesion } from './lib/sesion.js'
 import { useAvisos } from './lib/useAvisos.js'
@@ -56,6 +57,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Sesion />
+      {/* Aviso de versión nueva de la app instalada, en todas las pantallas */}
+      <AvisoVersion />
     </BrowserRouter>
   )
 }

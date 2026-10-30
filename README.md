@@ -190,7 +190,9 @@ El botón **Panel** del mapa aparece para el personal de puntos seguros y para e
 
 ## App instalable (PWA)
 
-`vite-plugin-pwa` genera el manifiesto (nombre, colores e íconos de PonyRadar) y un service worker que guarda la app para que abra rápido y sin red, y se actualiza sola al publicar una versión nueva. Los datos de Supabase no pasan por el service worker. Los íconos salen de `scripts/iconos/icono.svg` con `npm run iconos`.
+`vite-plugin-pwa` genera el manifiesto (nombre, colores e íconos de PonyRadar) y un service worker que guarda la app para que abra rápido y sin red. Los datos de Supabase no pasan por el service worker. Los íconos salen de `scripts/iconos/icono.svg` con `npm run iconos`.
+
+**Versiones nuevas:** la app revisa si hay versión nueva cada hora, al volver a la pantalla (por ejemplo, cuando el celular la trae del fondo) y al recuperar la red. Si la hay, muestra "Hay una versión nueva" con **Actualizar**, que activa el service worker nuevo y recarga la app una sola vez (`src/componentes/AvisoVersion.jsx` y `src/lib/version.js`). `npm run revisar:version` lo comprueba con el build real.
 
 Para instalarla: en Chrome de Android, menú → "Instalar app"; en iPhone, Safari → Compartir → "Agregar a inicio".
 

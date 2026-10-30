@@ -204,6 +204,10 @@ body {
   .etiqueta-alias-mal {
     @apply bg-[#fde7e8] text-[#a8333a];
   }
+  /* Aviso "Hay una versión nueva": arriba, sobre cualquier pantalla */
+  .aviso-version {
+    @apply fixed inset-x-3 top-3 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border-[2.5px] border-tinta bg-white px-4 pt-2.5 pb-2 shadow-[0_4px_0_#2b3a4a];
+  }
   .chip-panel {
     @apply bg-tinta text-white;
   }
