@@ -1,13 +1,23 @@
 // Hoja con los datos de un pin al tocarlo en el mapa.
 // Si el pin es verde y es tuyo, también muestra el dato ciego y la foto nítida (solo tú los ves).
+// Abajo van las acciones del caso: "Es mío" o "Lo encontré" (ver AccionesPin).
 import { useEffect, useState } from 'react'
 import { nombreCategoria } from '../lib/categorias.js'
 import { enlaceFoto, leerDatoCiego } from '../lib/pines.js'
 import { haceCuanto } from '../lib/tiempo.js'
 import { nombreCorto, zonaPorId } from '../mapa/zonas.js'
+import AccionesPin from './AccionesPin.jsx'
 import Hoja from './Hoja.jsx'
 
-export default function TarjetaPin({ pin, esMio = false, onCerrar }) {
+export default function TarjetaPin({
+  pin,
+  yo,
+  habilitado = true,
+  motivoSoloLectura,
+  onVerCasos,
+  onCerrar,
+}) {
+  const esMio = Boolean(yo) && pin.autorId === yo
   const [foto, setFoto] = useState(null)
   const [privado, setPrivado] = useState(null) // { dato, fotoNitida } para el autor
 
@@ -60,6 +70,15 @@ export default function TarjetaPin({ pin, esMio = false, onCerrar }) {
             />
           )}
         </div>
+      )}
+      {yo && (
+        <AccionesPin
+          pin={pin}
+          yo={yo}
+          habilitado={habilitado}
+          motivoSoloLectura={motivoSoloLectura}
+          onVerCasos={onVerCasos}
+        />
       )}
     </Hoja>
   )

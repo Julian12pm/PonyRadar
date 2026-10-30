@@ -1,5 +1,6 @@
 // Hoja que aparece al tocar el mapa: dice dónde cayó el toque y permite publicar un pin.
 // Pin rojo: "Perdí algo aquí". Pin verde: "Encontré esto" con dato ciego y foto desenfocada.
+import { MENSAJE_TITULO, tituloValido } from '../lib/validacion.js'
 import { useState } from 'react'
 import { CATEGORIAS } from '../lib/categorias.js'
 import { GUIAS_FOTO, prepararFotos } from '../lib/fotos.js'
@@ -19,7 +20,8 @@ function describirZona(zona) {
  * @param {{
  *   zona: object|null,            zona detectada (null = fuera del campus)
  *   tipoInicial?: 'rojo'|'verde', si el usuario ya eligió "Perdí algo" o "Encontré algo"
- *   puedePublicar?: boolean,      false si la cuenta está suspendida
+ *   puedePublicar?: boolean,      false si la cuenta está suspendida o no hay conexión
+ *   motivoSoloLectura?: string,   por qué no se puede publicar
  *   onPublicar: (datos) => Promise<void>, recibe { tipo, categoria, titulo, descripcion, piso,
  *                                  datoCiego, fotos }; si falla, lanza un error con su mensaje
  *   onCerrar: () => void
@@ -29,6 +31,7 @@ export default function HojaLugar({
   zona,
   tipoInicial = null,
   puedePublicar = true,
+  motivoSoloLectura = 'Tu cuenta está suspendida: puedes ver el mapa, pero no publicar pines.',
   onPublicar,
   onCerrar,
 }) {
@@ -51,7 +54,9 @@ export default function HojaLugar({
   }
 
   const esVerde = tipo === 'verde'
-  const listo = categoria && titulo.trim().length >= 3 && (!esVerde || datoCiego.trim().length >= 3)
+  const listo = categoria && tituloValido(titulo) && (!esVerde || datoCiego.trim().length >= 3)
+  // Solo se avisa cuando ya escribió algo que no sirve (no al abrir la hoja)
+  const tituloMal = titulo.trim().length > 0 && !tituloValido(titulo)
 
   const publicar = async (e) => {
     e.preventDefault()
@@ -78,7 +83,7 @@ export default function HojaLugar({
   return (
     <Hoja titulo={nombreCorto(zona)} subtitulo={describirZona(zona)} onCerrar={onCerrar}>
       {!puedePublicar ? (
-        <p>Tu cuenta está suspendida: puedes ver el mapa, pero no publicar pines.</p>
+        <p>{motivoSoloLectura}</p>
       ) : !tipo ? (
         <div className="grid grid-cols-2 gap-2.5">
           <button type="button" className="boton boton-rojo" onClick={() => setTipo('rojo')}>
@@ -121,9 +126,17 @@ export default function HojaLugar({
               onChange={(e) => setTitulo(e.target.value)}
               maxLength={60}
               required
+              aria-invalid={tituloMal}
+              aria-describedby={tituloMal ? 'titulo-pin-error' : undefined}
               placeholder={esVerde ? 'Ej. Calculadora' : 'Ej. Calculadora Casio'}
             />
           </label>
+          {/* Fuera de la etiqueta para no cambiar el nombre del campo; se liga con aria-describedby */}
+          {tituloMal && (
+            <p id="titulo-pin-error" className="-mt-1.5 text-sm font-semibold text-pin-rojo">
+              {MENSAJE_TITULO}
+            </p>
+          )}
           <label className="campo">
             <span>Descripción (opcional)</span>
             <textarea

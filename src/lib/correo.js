@@ -18,3 +18,20 @@ export function esCorreoInstitucional(correo) {
   const patron = /^[^\s@]+@morelia\.tecnm\.mx$/
   return patron.test(limpio)
 }
+
+/**
+ * Buzón real de un correo: sin el "+alias" (l23121064+sec@… → l23121064@…). Solo se permite
+ * una cuenta por buzón, salvo los alias que autorice el admin (lo revisa el servidor).
+ */
+export function buzonDe(correo) {
+  return (correo ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^([^@+]*)\+[^@]*@/, '$1@')
+}
+
+/** ¿El correo trae un "+alias"? */
+export function tieneAlias(correo) {
+  const limpio = (correo ?? '').trim().toLowerCase()
+  return limpio !== buzonDe(limpio)
+}

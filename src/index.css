@@ -24,8 +24,10 @@ body {
 
 /* Piezas de interfaz con borde grueso y sombra sólida, como piezas de maqueta */
 @layer components {
+  /* Nunca más ancha que su contenedor; un correo largo se parte en vez de empujar la tarjeta */
   .tarjeta {
-    @apply rounded-[20px] border-[2.5px] border-tinta bg-white shadow-[0_4px_0_#2b3a4a22];
+    @apply max-w-full min-w-0 rounded-[20px] border-[2.5px] border-tinta bg-white shadow-[0_4px_0_#2b3a4a22];
+    overflow-wrap: anywhere;
   }
   .chips {
     scrollbar-width: none;
@@ -77,10 +79,15 @@ body {
   .campo {
     @apply grid gap-1 text-left text-sm font-semibold;
   }
+  .campo {
+    @apply min-w-0;
+  }
+  /* Ocupan el ancho de la tarjeta y pueden encogerse (sin min-width, un campo con letra grande
+     como el del código se salía de la tarjeta en celulares angostos) */
   .campo input,
   .campo select,
   .campo textarea {
-    @apply rounded-xl border-2 border-tinta/25 bg-white px-3 pt-2 pb-1.5 text-base font-normal focus:border-tinta focus:outline-none;
+    @apply box-border w-full max-w-full min-w-0 rounded-xl border-2 border-tinta/25 bg-white px-3 pt-2 pb-1.5 text-base font-normal focus:border-tinta focus:outline-none;
   }
   .etiqueta-tipo {
     @apply rounded-full px-2.5 pt-0.5 text-sm font-bold text-white;
@@ -113,6 +120,102 @@ body {
     @apply w-full px-4 pt-1.5 pb-1 text-left text-[15px] hover:bg-[#eef3f6];
   }
 
+  /* ─── Mis casos ─── */
+  .titulo-grupo {
+    @apply mb-1.5 flex items-center gap-2 px-1 text-lg font-extrabold;
+  }
+  .contador {
+    @apply grid h-5 min-w-5 place-items-center rounded-full bg-pin-rojo px-1.5 pt-px text-xs text-white;
+  }
+  /* Fila de las listas "Se busca" / "En resguardo" (su borde lo colorea .caso-rojo/verde) */
+  .objeto-lista {
+    @apply block w-full rounded-[16px] border-[2.5px] border-l-[9px] border-tinta bg-white px-3.5 pt-2.5 pb-2 text-left shadow-[0_3px_0_#2b3a4a22] active:translate-y-px;
+  }
+  /* El borde izquierdo grueso dice de qué tipo es el pin del caso */
+  .caso {
+    @apply rounded-[18px] border-[2.5px] border-l-[9px] border-tinta bg-white px-3.5 pt-3 pb-3.5 shadow-[0_4px_0_#2b3a4a22];
+  }
+  .caso-rojo {
+    @apply border-l-pin-rojo;
+  }
+  .caso-verde {
+    @apply border-l-pin-verde;
+  }
+  .solicitud {
+    @apply rounded-xl bg-[#f4f7f9] px-3 pt-2 pb-2.5;
+  }
+  .boton-chico {
+    @apply rounded-xl border-2 border-tinta bg-white px-2 pt-1.5 pb-1 font-bold shadow-[0_2px_0_#2b3a4a] active:translate-y-px active:shadow-none disabled:opacity-45;
+  }
+  .aviso {
+    @apply flex w-full items-baseline gap-2 rounded-xl bg-white/60 px-3 pt-1.5 pb-1 text-left text-[15px] leading-snug;
+  }
+  .aviso-nuevo {
+    @apply bg-white font-semibold shadow-[inset_4px_0_0_#f2545b];
+  }
+  .contacto {
+    @apply rounded-2xl bg-[#eef3f6] px-3 pt-2.5 pb-3;
+  }
+  .boton-teams {
+    @apply block rounded-xl border-2 border-tinta bg-[#5b5fc7] px-3 pt-2 pb-1.5 text-center font-extrabold text-white shadow-[0_3px_0_#2b3a4a] active:translate-y-px active:shadow-none;
+  }
+  .hecho {
+    @apply rounded-2xl bg-[#e3f6ec] px-3 pt-2.5 pb-3;
+  }
+  .campo input.entrada-clave {
+    @apply w-40 text-center text-2xl font-extrabold tracking-[0.5em];
+  }
+  /* La clave de entrega: cuatro piezas de maqueta, grandes para dictarlas en persona */
+  .clave {
+    @apply mt-1.5 flex gap-2;
+  }
+  .clave span {
+    @apply grid h-16 w-14 place-items-center rounded-2xl border-[2.5px] border-tinta bg-techo pt-1 text-4xl font-extrabold shadow-[0_5px_0_#2b3a4a];
+    animation: pieza-cae 0.32s ease-out backwards;
+  }
+  .clave span:nth-child(2) {
+    animation-delay: 60ms;
+  }
+  .clave span:nth-child(3) {
+    animation-delay: 120ms;
+  }
+  .clave span:nth-child(4) {
+    animation-delay: 180ms;
+  }
+  /* ─── Fase 4: listas, avisos de cuenta y acciones secundarias ─── */
+  .aviso-cuenta {
+    @apply rounded-2xl border-2 border-pin-rojo bg-[#fde7e8] px-3.5 pt-2.5 pb-2 font-semibold;
+  }
+  .enlace-accion {
+    @apply text-sm font-bold underline decoration-2 underline-offset-2;
+  }
+  .pestanas {
+    @apply grid grid-cols-2 gap-1 rounded-full bg-[#eef3f6] p-1;
+  }
+  .pestanas-admin {
+    @apply grid-cols-3 rounded-[22px] sm:grid-cols-5 sm:rounded-full;
+  }
+  .pestanas-admin .pestana {
+    @apply text-[15px];
+  }
+  .etiqueta-alias {
+    @apply mt-1 inline-block rounded-full bg-[#eef3f6] px-2 pt-0.5 text-xs font-bold;
+  }
+  .etiqueta-alias-mal {
+    @apply bg-[#fde7e8] text-[#a8333a];
+  }
+  .chip-panel {
+    @apply bg-tinta text-white;
+  }
+  .pestana {
+    @apply flex items-center justify-center gap-1.5 rounded-full px-2 pt-1 pb-0.5 font-bold;
+  }
+  .pestana-activa {
+    @apply bg-tinta text-white;
+  }
+  .pestana-numero {
+    @apply rounded-full bg-white/80 px-1.5 text-xs text-tinta;
+  }
   .atribucion {
     @apply mt-1.5 block text-right text-[10px] text-tinta/70;
   }
@@ -124,7 +227,14 @@ body {
   }
 }
 
+@keyframes pieza-cae {
+  from {
+    transform: translateY(-14px);
+    opacity: 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
+  .clave span,
   .hoja {
     animation: none;
   }

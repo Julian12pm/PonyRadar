@@ -1,9 +1,25 @@
 // Sesión del usuario: inicio con código de 6 dígitos por correo (OTP) y su perfil.
 import { useEffect, useState } from 'react'
+import { guardarLocal, leerLocal } from './conexion.js'
 import { esCorreoInstitucional } from './correo.js'
 import { supabase } from './supabase.js'
 
-/** Envía el código de 6 dígitos al correo. Crea la cuenta si es la primera vez. */
+/**
+ * ¿Supabase se tardó en contestar (504 / 408 / "timeout")? Con el SMTP del Tec, mandar el
+ * correo a veces tarda más de 10 s y el servidor responde 504 aunque el correo sí sale.
+ * No cuenta "sin conexión" (status 0): ahí el correo seguro no se pidió.
+ */
+export function esTiempoAgotado(error) {
+  if (!error) return false
+  if ([408, 504].includes(Number(error.status))) return true
+  return /timeout|timed out|gateway/i.test(`${error.name ?? ''} ${error.message ?? ''}`)
+}
+
+/**
+ * Envía el código de 6 dígitos al correo. Crea la cuenta si es la primera vez.
+ * @returns {Promise<'enviado' | 'lento'>} 'lento' si el servidor tardó: el correo
+ *   probablemente sí salió, pero puede tardar en llegar.
+ */
 export async function enviarCodigo(correo) {
   const limpio = correo.trim().toLowerCase()
   if (!esCorreoInstitucional(limpio)) {
@@ -13,7 +29,9 @@ export async function enviarCodigo(correo) {
     email: limpio,
     options: { shouldCreateUser: true },
   })
+  if (esTiempoAgotado(error)) return 'lento'
   if (error) throw new Error(traducirErrorAuth(error))
+  return 'enviado'
 }
 
 /** Verifica el código que llegó por correo e inicia la sesión. */
@@ -33,6 +51,14 @@ export function puedePublicar(perfil, ahora = new Date()) {
 }
 
 export async function cerrarSesion() {
+  // Se borran las copias locales (pines y perfil) para no dejarlas en un equipo compartido
+  try {
+    Object.keys(localStorage)
+      .filter((clave) => clave.startsWith('ponyradar:'))
+      .forEach((clave) => localStorage.removeItem(clave))
+  } catch {
+    // sin acceso al almacenamiento: no hay nada que borrar
+  }
   await supabase.auth.signOut()
 }
 
@@ -45,8 +71,12 @@ export function traducirErrorAuth(error) {
   if (/rate limit|security purposes|too many/i.test(mensaje)) {
     return 'Pediste demasiados códigos. Espera un momento y vuelve a intentar.'
   }
+  // Rechazos del registro (hook "Before User Created", migración 0011): se muestran tal cual
+  if (/solo se permite una cuenta|Ya existe una cuenta/i.test(mensaje)) return mensaje
   if (/morelia\.tecnm\.mx/.test(mensaje)) return 'Usa tu correo institucional @morelia.tecnm.mx'
-  if (/fetch|network/i.test(mensaje)) return 'Sin conexión. Revisa tu internet.'
+  if (/fetch|network/i.test(mensaje) || error?.status === 0) {
+    return 'No hay conexión con el servidor. Intenta de nuevo en un momento.'
+  }
   return mensaje || 'Algo salió mal. Intenta de nuevo.'
 }
 
@@ -62,12 +92,20 @@ export function useSesion() {
     const actualizar = async (sesion) => {
       let perfil = null
       if (sesion) {
-        const { data } = await supabase
-          .from('perfiles')
-          .select('id, correo, nombre, rol, suspendido_hasta, bloqueado')
-          .eq('id', sesion.user.id)
-          .maybeSingle()
-        perfil = data
+        const clave = `ponyradar:perfil:${sesion.user.id}`
+        try {
+          const { data, error } = await supabase
+            .from('perfiles')
+            .select('id, correo, nombre, rol, suspendido_hasta, bloqueado')
+            .eq('id', sesion.user.id)
+            .maybeSingle()
+          if (error) throw error
+          perfil = data
+          guardarLocal(clave, data)
+        } catch {
+          // Sin conexión con el servidor: se usa la última copia del perfil
+          perfil = leerLocal(clave)?.valor ?? null
+        }
       }
       if (vigente) setEstado({ cargando: false, sesion, perfil })
     }

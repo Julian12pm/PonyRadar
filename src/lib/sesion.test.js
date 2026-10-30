@@ -8,7 +8,7 @@ const auth = vi.hoisted(() => ({
 }))
 vi.mock('./supabase.js', () => ({ supabase: { auth }, configurado: true }))
 
-const { enviarCodigo, puedePublicar, traducirErrorAuth, verificarCodigo } =
+const { enviarCodigo, esTiempoAgotado, puedePublicar, traducirErrorAuth, verificarCodigo } =
   await import('./sesion.js')
 
 describe('enviarCodigo', () => {
@@ -23,6 +23,49 @@ describe('enviarCodigo', () => {
       email: 'l21120001@morelia.tecnm.mx',
       options: { shouldCreateUser: true },
     })
+  })
+
+  it('si el servidor tarda (504), no es error: el correo casi siempre sí sale', async () => {
+    auth.signInWithOtp.mockResolvedValueOnce({
+      error: { name: 'AuthRetryableFetchError', message: 'Gateway Timeout', status: 504 },
+    })
+    expect(await enviarCodigo('l21120001@morelia.tecnm.mx')).toBe('lento')
+    expect(await enviarCodigo('l21120001@morelia.tecnm.mx')).toBe('enviado')
+  })
+
+  it('otros errores sí se muestran', async () => {
+    auth.signInWithOtp.mockResolvedValueOnce({
+      error: {
+        message: 'For security purposes, you can only request this after 30 seconds',
+        status: 429,
+      },
+    })
+    await expect(enviarCodigo('l21120001@morelia.tecnm.mx')).rejects.toThrow('demasiados códigos')
+  })
+})
+
+describe('esTiempoAgotado', () => {
+  it('reconoce 504, 408 y mensajes de timeout, pero no la falta de internet', () => {
+    expect(esTiempoAgotado({ status: 504, message: '' })).toBe(true)
+    expect(esTiempoAgotado({ status: 408, message: '' })).toBe(true)
+    expect(esTiempoAgotado({ message: 'upstream request timeout' })).toBe(true)
+    expect(esTiempoAgotado({ message: 'Request timed out' })).toBe(true)
+    expect(esTiempoAgotado({ status: 0, message: 'Failed to fetch' })).toBe(false)
+    expect(esTiempoAgotado({ status: 500, message: 'Error sending magic link email' })).toBe(false)
+    expect(esTiempoAgotado(null)).toBe(false)
+  })
+})
+
+describe('rechazos del registro por alias', () => {
+  it('muestra el motivo del servidor', () => {
+    expect(
+      traducirErrorAuth({
+        message: 'Usa tu correo institucional sin "+": solo se permite una cuenta por persona',
+      }),
+    ).toMatch(/sin "\+"/)
+    expect(
+      traducirErrorAuth({ message: 'Ya existe una cuenta con este correo institucional' }),
+    ).toBe('Ya existe una cuenta con este correo institucional')
   })
 })
 
@@ -45,7 +88,9 @@ describe('verificarCodigo', () => {
 describe('traducirErrorAuth', () => {
   it('explica los errores más comunes', () => {
     expect(traducirErrorAuth({ message: 'email rate limit exceeded' })).toMatch(/demasiados/)
-    expect(traducirErrorAuth({ message: 'Failed to fetch' })).toMatch(/conexión/)
+    expect(traducirErrorAuth({ message: 'Failed to fetch' })).toMatch(
+      /No hay conexión con el servidor/,
+    )
     expect(traducirErrorAuth({ message: 'Solo se aceptan correos @morelia.tecnm.mx' })).toMatch(
       /institucional/,
     )

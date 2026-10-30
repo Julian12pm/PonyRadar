@@ -1,11 +1,16 @@
 // Pines guardados en Supabase: cargar, crear (con fotos) y escuchar cambios en tiempo real.
 import { supabase } from './supabase.js'
 
+/** Error con el mensaje de Supabase y su código de estado (para distinguir fallas de red). */
+export function errorDe(error) {
+  return Object.assign(new Error(error.message), { status: error.status, code: error.code })
+}
+
 // Estados con los que un pin se dibuja en el mapa (los demás van a otras listas en la Fase 4)
 export const ESTADOS_EN_MAPA = ['activo', 'con_solicitud', 'aceptado']
 
-const COLUMNAS =
-  'id, autor_id, tipo, categoria, titulo, descripcion, zona_id, piso, x, y, estado, creado_en, expira_en, foto_publica, tiene_foto_nitida'
+export const COLUMNAS =
+  'id, autor_id, tipo, categoria, titulo, descripcion, zona_id, piso, x, y, estado, creado_en, expira_en, renovado, foto_publica, tiene_foto_nitida, punto_seguro_id, pin_vinculado_id, encontrado, verde_en_curso'
 
 /** Convierte una fila de la tabla "pines" al formato que usa la app. */
 export function filaAPin(fila) {
@@ -24,12 +29,26 @@ export function filaAPin(fila) {
     expira: fila.expira_en,
     fotoPublica: fila.foto_publica ?? null,
     tieneFotoNitida: Boolean(fila.tiene_foto_nitida),
+    renovado: Boolean(fila.renovado),
+    puntoSeguroId: fila.punto_seguro_id ?? null,
+    // "Lo encontré": el verde apunta a su rojo; el rojo queda "encontrado" mientras siga en curso
+    pinVinculadoId: fila.pin_vinculado_id ?? null,
+    encontrado: Boolean(fila.encontrado),
+    // Verde vinculado que aún no se entrega (aunque haya caducado): el rojo lleva la nota
+    // "Alguien dijo que lo encontró" y no acepta otro "Lo encontré"
+    verdeEnCursoId: fila.verde_en_curso ?? null,
   }
 }
 
-/** ¿El pin se dibuja en el mapa? Solo los de estados visibles que no han caducado (72 h). */
+/**
+ * ¿El pin se dibuja en el mapa? Los activos, mientras no pasen sus 72 h. Los que tienen una
+ * solicitud pendiente o aceptada no caducan (especificación, sección 7), así que siguen visibles.
+ */
 export function seVeEnMapa(pin, ahora = new Date()) {
-  return ESTADOS_EN_MAPA.includes(pin.estado) && new Date(pin.expira) > ahora
+  // Un rojo que alguien ya encontró no se muestra: en su lugar está el verde vinculado
+  if (pin.tipo === 'rojo' && pin.encontrado) return false
+  if (pin.estado === 'activo') return new Date(pin.expira) > ahora
+  return ESTADOS_EN_MAPA.includes(pin.estado)
 }
 
 /**
@@ -46,23 +65,29 @@ export async function cargarPines() {
   const { data, error } = await supabase
     .from('pines')
     .select(COLUMNAS)
-    .in('estado', ESTADOS_EN_MAPA)
-    .gt('expira_en', new Date().toISOString())
-  if (error) throw new Error(error.message)
+    .or(
+      `estado.in.(con_solicitud,aceptado),and(estado.eq.activo,expira_en.gt."${new Date().toISOString()}")`,
+    )
+    .eq('encontrado', false)
+  if (error) throw errorDe(error)
   return data.map(filaAPin)
 }
 
 /**
- * Escucha pines nuevos y cambios. Llama a alCambiar(pin) con cada uno.
+ * Escucha pines nuevos y cambios. Llama a alCambiar(pin) con cada uno, y a alEstado con
+ * 'conectado' o 'desconectado' cuando cambia la conexión en tiempo real.
  * @returns {() => void} función para dejar de escuchar
  */
-export function escucharPines(alCambiar) {
+export function escucharPines(alCambiar, alEstado = () => {}) {
   const canal = supabase
     .channel('pines-del-mapa')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'pines' }, (cambio) => {
       if (cambio.new?.id) alCambiar(filaAPin(cambio.new))
     })
-    .subscribe()
+    .subscribe((estado) => {
+      if (estado === 'SUBSCRIBED') alEstado('conectado')
+      else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(estado)) alEstado('desconectado')
+    })
   return () => supabase.removeChannel(canal)
 }
 
@@ -84,7 +109,7 @@ export async function crearPin(datos) {
     p_y: datos.punto[1],
     p_dato_ciego: datos.tipo === 'verde' ? datos.datoCiego : null,
   })
-  if (error) throw new Error(error.message)
+  if (error) throw errorDe(error)
 
   if (datos.fotos?.publica) {
     const subir = (nombre, archivo) =>
@@ -127,7 +152,7 @@ export async function cargarPuntosSeguros() {
     supabase.from('puntos_seguros').select('id, nombre, zona_id').eq('activo', true),
     supabase.from('pines').select('punto_seguro_id').eq('estado', 'en_resguardo'),
   ])
-  if (error) throw new Error(error.message)
+  if (error) throw errorDe(error)
   return puntos.map((p) => ({
     id: p.id,
     nombre: p.nombre,

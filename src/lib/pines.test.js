@@ -73,6 +73,26 @@ describe('seVeEnMapa', () => {
     expect(seVeEnMapa(filaAPin({ ...fila, estado: 'entregado' }), ahora)).toBe(false)
     expect(seVeEnMapa(filaAPin({ ...fila, estado: 'en_resguardo' }), ahora)).toBe(false)
   })
+
+  it('un rojo que ya encontraron no se muestra (lo representa su verde vinculado)', () => {
+    const rojo = filaAPin({ ...fila, tipo: 'rojo', encontrado: true })
+    expect(rojo.encontrado).toBe(true)
+    expect(seVeEnMapa(rojo, ahora)).toBe(false)
+    expect(seVeEnMapa(filaAPin({ ...fila, tipo: 'rojo', encontrado: false }), ahora)).toBe(true)
+    // Su verde caducó: el rojo se vuelve a ver, pero recuerda que alguien lo encontró
+    const conNota = filaAPin({ ...fila, tipo: 'rojo', encontrado: false, verde_en_curso: 'v1' })
+    expect(conNota.verdeEnCursoId).toBe('v1')
+    expect(seVeEnMapa(conNota, ahora)).toBe(true)
+    const verde = filaAPin({ ...fila, pin_vinculado_id: 'r1' })
+    expect(verde.pinVinculadoId).toBe('r1')
+    expect(seVeEnMapa(verde, ahora)).toBe(true)
+  })
+
+  it('los que tienen solicitud pendiente o aceptada no caducan', () => {
+    const vencido = { ...fila, expira_en: '2026-10-25T09:00:00Z' }
+    expect(seVeEnMapa(filaAPin({ ...vencido, estado: 'con_solicitud' }), ahora)).toBe(true)
+    expect(seVeEnMapa(filaAPin({ ...vencido, estado: 'aceptado' }), ahora)).toBe(true)
+  })
 })
 
 describe('aplicarCambio (tiempo real)', () => {
