@@ -23,22 +23,23 @@ npm run dev                  # abre http://localhost:5173
 
 ## Comandos
 
-| Comando                     | Qué hace                                                                                  |
-| --------------------------- | ----------------------------------------------------------------------------------------- |
-| `npm run dev`               | Servidor de desarrollo con recarga automática                                             |
-| `npm run build`             | Genera la versión de producción en `dist/`                                                |
-| `npm run preview`           | Sirve `dist/` para probar el build                                                        |
-| `npm run lint`              | Revisa el código con ESLint                                                               |
-| `npm run format`            | Da formato a todo con Prettier                                                            |
-| `npm run format:check`      | Verifica el formato sin cambiar nada (lo usa CI)                                          |
-| `npm test`                  | Corre las pruebas una vez                                                                 |
-| `npm run test:watch`        | Corre las pruebas cada vez que guardas                                                    |
-| `npm run coverage`          | Pruebas + reporte de cobertura en `coverage/`                                             |
-| `npm run osm:descargar`     | Baja de OpenStreetMap los datos crudos del campus                                         |
-| `npm run osm:convertir`     | Genera `src/mapa/campus-osm.json` para el croquis                                         |
-| `npm run iconos`            | Genera los íconos PNG de la app desde `scripts/iconos/icono.svg`                          |
-| `npm run revisar:pantallas` | Recorre todas las pantallas con Playwright (con `npm run dev` abierto)                    |
-| `npm run revisar:pwa`       | Revisa que la app sea instalable y abra sin red (con `npm run preview` en el puerto 4173) |
+| Comando                     | Qué hace                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------- |
+| `npm run dev`               | Servidor de desarrollo con recarga automática                                                     |
+| `npm run build`             | Genera la versión de producción en `dist/`                                                        |
+| `npm run preview`           | Sirve `dist/` para probar el build                                                                |
+| `npm run lint`              | Revisa el código con ESLint                                                                       |
+| `npm run format`            | Da formato a todo con Prettier                                                                    |
+| `npm run format:check`      | Verifica el formato sin cambiar nada (lo usa CI)                                                  |
+| `npm test`                  | Corre las pruebas una vez                                                                         |
+| `npm run test:watch`        | Corre las pruebas cada vez que guardas                                                            |
+| `npm run coverage`          | Pruebas + reporte de cobertura en `coverage/`                                                     |
+| `npm run osm:descargar`     | Baja de OpenStreetMap los datos crudos del campus                                                 |
+| `npm run osm:convertir`     | Genera `src/mapa/campus-osm.json` para el croquis                                                 |
+| `npm run iconos`            | Genera los íconos PNG de la app desde `scripts/iconos/icono.svg`                                  |
+| `npm run revisar:pantallas` | Recorre todas las pantallas con Playwright (con `npm run dev` abierto)                            |
+| `npm run revisar:pwa`       | Revisa que la app sea instalable y abra sin red (con `npm run preview` en el puerto 4173)         |
+| `npm run revisar:version`   | Simula una versión nueva y revisa el aviso y la recarga (con `npm run preview` en el puerto 4173) |
 
 ## Datos del mapa
 
