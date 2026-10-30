@@ -126,7 +126,9 @@ export default function AccionesPin({ pin, yo, habilitado, motivoSoloLectura, on
   const candidato =
     !esMio &&
     pin.tipo === 'verde' &&
-    ['activo', 'con_solicitud', 'en_resguardo'].includes(pin.estado)
+    (['activo', 'con_solicitud', 'en_resguardo'].includes(pin.estado) ||
+      // Un verde vinculado que caducó lo puede reclamar el dueño del rojo
+      (pin.estado === 'caducado' && Boolean(pin.pinVinculadoId)))
   const vinculado = Boolean(pin.pinVinculadoId)
   const [formulario, setFormulario] = useState(null) // 'es-mio' | 'lo-encontre'
   const [hecho, setHecho] = useState(null)
@@ -202,6 +204,14 @@ export default function AccionesPin({ pin, yo, habilitado, motivoSoloLectura, on
     return (
       <p className="mt-3 text-sm font-semibold text-tinta/70">
         Alguien ya dijo que lo encontró. Su dueño ya recibió el aviso.
+      </p>
+    )
+  }
+  // El verde vinculado caducó: el rojo volvió a "Se busca", pero ya hay quien lo tiene
+  if (pin.tipo === 'rojo' && pin.verdeEnCursoId) {
+    return (
+      <p className="mt-3 text-sm font-semibold text-tinta/70">
+        Alguien dijo que lo encontró. Su dueño ya recibió el aviso.
       </p>
     )
   }

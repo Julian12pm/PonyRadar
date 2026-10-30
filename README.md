@@ -120,6 +120,7 @@ Las migraciones están numeradas en `supabase/migrations/` y se aplican en orden
 | `0009_puntos_con_personal.sql`     | Solo se dejan objetos en puntos seguros activos y con personal                                             |
 | `0010_lo_encontre_unico.sql`       | "Lo encontré" una sola vez por pin rojo; solo su dueño reclama el verde vinculado                          |
 | `0011_moderacion.sql`              | Una cuenta por correo (sin "+alias" salvo los autorizados), eliminar pines con motivo y títulos con letras |
+| `0012_rojo_tras_borrar_verde.sql`  | Si se borra un verde vinculado, su pin rojo vuelve a mostrarse                                             |
 
 `supabase/seed.sql` agrega los datos de demo (semestre vigente y el punto seguro de la Biblioteca).
 
@@ -161,7 +162,7 @@ Todo pasa en funciones RPC de `0006_reclamos_y_entrega.sql`; la app solo las lla
 4. El dueño pulsa **Ver mi clave de entrega**: el servidor genera 4 dígitos, los muestra una sola vez y guarda solo su hash (nadie puede leer el hash por la API). Si la olvida, pide otra.
 5. En persona, quien tiene el objeto escribe la clave. Correcta: el pin queda `entregado`. Con 5 fallos la aceptación se cancela y el pin vuelve a estar disponible.
 
-**Lo encontré** (pin rojo ajeno, una sola vez mientras el anterior siga en curso) crea un pin verde vinculado en el mismo lugar con el dato ciego de quien lo encontró, y avisa al dueño, que lo reclama con "Es mío" (nadie más puede). Mientras tanto el rojo no se muestra en el mapa ni en "Se busca". Al entregarlo, el pin rojo también se cierra.
+**Lo encontré** (pin rojo ajeno, una sola vez mientras el anterior siga en curso) crea un pin verde vinculado en el mismo lugar con el dato ciego de quien lo encontró, y avisa al dueño, que lo reclama con "Es mío" (nadie más puede). Mientras tanto el rojo no se muestra en el mapa ni en "Se busca"; si ese verde caduca sin entregarse, el rojo vuelve a "Se busca" con la nota "Alguien dijo que lo encontró" (sigue sin aceptar otro "Lo encontré") y su dueño todavía puede reclamar el verde. Al entregarlo, el pin rojo también se cierra.
 
 **Avisos:** se crean en el servidor (reclamos, respuestas, "Lo encontré" y pines verdes de la misma categoría y zona que un rojo tuyo), llegan en tiempo real y se cuentan en el botón **Mis casos**. Abrir `/?pin=<id>` abre ese pin en el mapa.
 

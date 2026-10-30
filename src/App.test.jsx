@@ -42,6 +42,17 @@ vi.mock('./lib/casos.js', async (original) => ({
   marcarAvisosLeidos: vi.fn(async () => {}),
   miSolicitudAlPin: vi.fn(async () => null),
   soyAutorDelPin: vi.fn(async () => false),
+  cargarPin: vi.fn(async (id) => ({
+    id,
+    autorId: 'otro',
+    tipo: 'verde',
+    categoria: 'termos',
+    titulo: 'Termo encontrado',
+    zonaId: 'edificio-K',
+    estado: 'caducado',
+    pinVinculadoId: 'mi-rojo',
+    creado: new Date(Date.now() - 4 * 86400000).toISOString(),
+  })),
   solicitarPin: vi.fn(async () => 'sol-1'),
   loEncontre: vi.fn(async () => 'verde-1'),
   cargarCasos: vi.fn(async () => []),
@@ -59,6 +70,18 @@ vi.mock('./lib/casos.js', async (original) => ({
         estado: 'caducado',
         creado: new Date(Date.now() - 5 * 86400000).toISOString(),
         expira: new Date(Date.now() - 2 * 86400000).toISOString(),
+      },
+      {
+        id: 'r-con-nota',
+        autorId: 'otro',
+        tipo: 'rojo',
+        categoria: 'termos',
+        titulo: 'Termo con nota',
+        zonaId: 'edificio-K',
+        estado: 'caducado',
+        verdeEnCursoId: 'v-caducado',
+        creado: new Date(Date.now() - 6 * 86400000).toISOString(),
+        expira: new Date(Date.now() - 3 * 86400000).toISOString(),
       },
     ],
     enResguardo: [
@@ -208,6 +231,18 @@ describe('App', () => {
     // Regresa al mapa
     fireEvent.click(screen.getByRole('button', { name: 'Mapa' }))
     expect(await screen.findByRole('button', { name: /Calculadora Casio/ })).toBeInTheDocument()
+  })
+
+  it('un verde vinculado caducado (fuera de las listas) se abre por enlace y su dueño lo reclama', async () => {
+    const casos = await import('./lib/casos.js')
+    casos.soyAutorDelPin.mockResolvedValueOnce(true)
+    window.history.replaceState(null, '', '/listas?pin=v-caducado')
+    render(<App />)
+    // La nota de "Se busca" para el rojo cuyo verde caducó
+    expect(await screen.findByText(/Alguien dijo que lo encontró/)).toBeInTheDocument()
+    const hoja = await screen.findByRole('dialog', { name: 'Termo encontrado' })
+    expect(await within(hoja).findByRole('button', { name: 'Es mío' })).toBeInTheDocument()
+    expect(casos.cargarPin).toHaveBeenCalledWith('v-caducado')
   })
 
   it('"Listas" muestra "Se busca" y "En resguardo"; desde ahí se reclama', async () => {

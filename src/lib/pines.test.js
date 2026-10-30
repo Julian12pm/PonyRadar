@@ -79,6 +79,10 @@ describe('seVeEnMapa', () => {
     expect(rojo.encontrado).toBe(true)
     expect(seVeEnMapa(rojo, ahora)).toBe(false)
     expect(seVeEnMapa(filaAPin({ ...fila, tipo: 'rojo', encontrado: false }), ahora)).toBe(true)
+    // Su verde caducó: el rojo se vuelve a ver, pero recuerda que alguien lo encontró
+    const conNota = filaAPin({ ...fila, tipo: 'rojo', encontrado: false, verde_en_curso: 'v1' })
+    expect(conNota.verdeEnCursoId).toBe('v1')
+    expect(seVeEnMapa(conNota, ahora)).toBe(true)
     const verde = filaAPin({ ...fila, pin_vinculado_id: 'r1' })
     expect(verde.pinVinculadoId).toBe('r1')
     expect(seVeEnMapa(verde, ahora)).toBe(true)
