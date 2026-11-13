@@ -20,7 +20,7 @@ supabase/.branches
 Thumbs.db
 *.log
 
-# Configuración local de Claude Code
+# Configuración local de herramientas
 .claude/
 
 # Datos crudos de OpenStreetMap (se regeneran con scripts/osm/descargar.mjs)
@@ -32,4 +32,3 @@ scripts/osm/campus.osm.json
 # Archivos de trabajo locales (especificación, referencias y prompt): no se suben
 docs/
 referencia/
-PROMPT_CLAUDE_CODE.md
