@@ -58,16 +58,48 @@ export default function Login() {
   }
 
   return (
-    // minmax(0, 1fr): la columna nunca es más ancha que la pantalla, aunque algo no quepa
-    <main className="grid min-h-full grid-cols-[minmax(0,1fr)] place-items-center bg-fondo px-4 py-8">
-      <div className="tarjeta w-full max-w-sm px-5 pt-5 pb-6">
-        <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-3xl font-extrabold [overflow-wrap:normal]">
-          <img src="/favicon.svg" alt="" className="size-11 shrink-0" />
-          PonyRadar
-        </h1>
-        <p className="mt-1 text-tinta/75">
-          Objetos perdidos y encontrados del Tec de Morelia, sobre el mapa del campus.
-        </p>
+    <main className="min-h-full bg-fondo px-4 py-6 sm:px-6 sm:py-10">
+      <div className="mx-auto grid min-h-[calc(100dvh-3rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
+        <section className="mx-auto w-full max-w-xl lg:mx-0" aria-labelledby="bienvenida-titulo">
+          <a href="/" className="inline-flex items-center gap-2 text-lg font-extrabold">
+            <img src="/favicon.svg" alt="" className="size-10" />
+            PonyRadar
+          </a>
+          <p className="mt-8 inline-flex items-center gap-2 rounded-full border-2 border-tinta/10 bg-white/70 px-3 py-1 text-sm font-bold">
+            <span className="size-2.5 rounded-full bg-pin-verde" aria-hidden="true" />
+            Comunidad del Tec de Morelia
+          </p>
+          <h1 id="bienvenida-titulo" className="mt-4 text-4xl leading-[1.05] font-extrabold sm:text-5xl">
+            Lo perdiste.<br />
+            <span className="text-pin-verde">La comunidad</span> puede encontrarlo.
+          </h1>
+          <p className="mt-4 max-w-lg text-lg leading-relaxed text-tinta/75">
+            Publica un aviso en el mapa del campus y conecta con quien encontró tu objeto. Si ves algo perdido, ayuda a que vuelva a su dueño.
+          </p>
+
+          <div className="mt-7 grid max-w-lg grid-cols-2 gap-3" aria-label="Cómo puedes ayudar">
+            <div className="rounded-2xl border-2 border-tinta bg-white p-4 shadow-[0_4px_0_#2b3a4a22]">
+              <span className="grid size-10 place-items-center rounded-xl bg-pin-rojo/12 text-xl" aria-hidden="true">●</span>
+              <h2 className="mt-3 font-extrabold">¿Perdiste algo?</h2>
+              <p className="mt-1 text-sm text-tinta/70">Marca el lugar y describe tu objeto.</p>
+            </div>
+            <div className="rounded-2xl border-2 border-tinta bg-white p-4 shadow-[0_4px_0_#2b3a4a22]">
+              <span className="grid size-10 place-items-center rounded-xl bg-pin-verde/15 text-xl" aria-hidden="true">●</span>
+              <h2 className="mt-3 font-extrabold">¿Encontraste algo?</h2>
+              <p className="mt-1 text-sm text-tinta/70">Avísale a su dueño con seguridad.</p>
+            </div>
+          </div>
+
+          <div className="mt-6 flex items-start gap-3 rounded-2xl bg-[#dce5d7] p-4 text-sm">
+            <span className="text-lg" aria-hidden="true">●</span>
+            <p><strong>Entrega segura:</strong> los datos de verificación protegen cada reclamo y puedes coordinar la entrega en un punto seguro.</p>
+          </div>
+        </section>
+
+        <section className="mx-auto w-full max-w-md" aria-labelledby="acceso-titulo">
+          <div className="tarjeta px-5 pt-5 pb-6 sm:px-7 sm:pt-7">
+            <h2 id="acceso-titulo" className="text-2xl font-extrabold">Encuentra el camino de vuelta</h2>
+            <p className="mt-1 text-tinta/75">Inicia sesión con tu correo institucional para entrar al mapa.</p>
 
         {paso === 'correo' ? (
           <form className="mt-5 grid gap-3" onSubmit={pedirCodigo} noValidate>
@@ -148,6 +180,10 @@ export default function Login() {
             {error}
           </p>
         )}
+      </div>
+          </div>
+          <p className="mt-4 text-center text-xs text-tinta/60">PonyRadar · Objetos perdidos y encontrados del campus</p>
+        </section>
       </div>
     </main>
   )
